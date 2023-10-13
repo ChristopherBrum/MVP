@@ -3,6 +3,7 @@
   <head>
     <meta name="viewport" content="width=device-width,initial-scale=1.0">
     <title>Socket.IO chat</title>
+    <script src="https://cdn.socket.io/4.0.1/socket.io.min.js"></script>
 		<link rel="stylesheet" type="text/css" href="./css/main.css" />
   </head>
   <body>
@@ -11,5 +12,6 @@
     <form id="form" action="">
       <input id="input" autocomplete="off" /><button>Send</button>
     </form>
+    <script type="module" src="./services/messages.js"></script>
   </body>
 </html>
