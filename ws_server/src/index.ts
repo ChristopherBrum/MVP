@@ -5,21 +5,28 @@ const express = require('express');
 const app = express();
 const cors = require('cors');
 const httpServer = createServer(app);
+const { connect } = require("mongoose");
+require("dotenv").config();
 
-// const mongoose = require("mongoose");
-// require("dotenv").config();
+const MgRequest = require('./models/request')
 
-// const Request = require('./models/request')
+// code from Mongoose Typescript Support
+run().catch(err => console.log(err));
 
-// mongoose.set('strictQuery', false)
-// console.log('### CONNECTING TO MONGO...')
-// mongoose.connect(ENV_DB)
-//   .then(() => {
-//     console.log('### CONNECTED TO MongoDB')
-//   })
-//   .catch((error) => {
-//     console.log('### ERROR CONNECTING TO MongoDB:', error.message)
-//   });
+async function run() {
+  // 4. Connect to MongoDB
+  await connect(process.env.ENV_DB);
+
+  const mgrequest = new MgRequest({
+    key: 'Bill',
+    header: 'bill@initech.com',
+    body: "Connected to DB babeeee!"
+  });
+  await mgrequest.save();
+
+  console.log(mgrequest.body); // "Connected to DB babeeee!"
+}
+
 
 // app.get('/:bin_path/:mongo_id', async (request, response) => {
 //   const mongoId = request.params.mongo_id

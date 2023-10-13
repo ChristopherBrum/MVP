@@ -1,7 +1,7 @@
-const mongoose = require('mongoose');
-import { Schema, model, connect } from 'mongoose';
+// const mongoose = require('mongoose');
+import { Document, Schema, model } from 'mongoose';
 
-interface IMgRequest {
+interface IMgRequest extends Document<any> {
   key: string;
   header: string;
   body: string;
@@ -32,6 +32,7 @@ const requestSchema = new Schema<IMgRequest>({
 // })
 
 const MgRequest = model<IMgRequest>('MgRequest', requestSchema);
+
 
 module.exports = MgRequest
 // module.exports = mongoose.model('Request', requestSchema)
