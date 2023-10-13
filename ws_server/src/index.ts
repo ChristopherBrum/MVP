@@ -6,12 +6,37 @@ const app = express();
 const cors = require('cors');
 const httpServer = createServer(app);
 
+// const mongoose = require("mongoose");
+// require("dotenv").config();
+
+// const Request = require('./models/request')
+
+// mongoose.set('strictQuery', false)
+// console.log('### CONNECTING TO MONGO...')
+// mongoose.connect(ENV_DB)
+//   .then(() => {
+//     console.log('### CONNECTED TO MongoDB')
+//   })
+//   .catch((error) => {
+//     console.log('### ERROR CONNECTING TO MongoDB:', error.message)
+//   });
+
+// app.get('/:bin_path/:mongo_id', async (request, response) => {
+//   const mongoId = request.params.mongo_id
+//   // we are supposed to search by key?
+//   let singleRequest = await Request.find({key:`${mongoId}`}).exec();
+//   console.log('### Mongo QUERIED 123');
+//   console.log(mongoId)
+//   console.log(singleRequest)
+//   response.send(singleRequest)
+// })
+
 app.use(cors({
   origin: 'http://localhost:3002',  // Replace with your client's origin
 }));
 app.use(express.json());
 
-const PORT = 3001;
+const PORT = process.env.ENV_PORT || 3001; // this is updated but no ENV_PORT at the moment
 
 interface ServerToClientEvents {
   noArg: () => void;
@@ -53,6 +78,9 @@ app.get('/', (req: Request, res: Response) => {
 io.on('connection', (socket) => {
   console.log('A user connected');
   socket.emit("message", "hello");
+	socket.on('disconnect', () => {
+    console.log('user disconnected');
+  });
 });
 
 app.put('/api/postman', (req: Request, res: Response) => {
