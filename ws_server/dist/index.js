@@ -20,28 +20,15 @@ require("dotenv").config();
 const MgRequest = require('./models/request');
 // code from Mongoose Typescript Support
 run().catch(err => console.log(err));
+// Connect to MongoDB
 function run() {
     return __awaiter(this, void 0, void 0, function* () {
-        // 4. Connect to MongoDB
-        yield connect(process.env.ENV_DB);
-        const mgrequest = new MgRequest({
-            key: 'Bill',
-            header: 'bill@initech.com',
-            body: "Connected to DB babeeee!"
+        yield connect(process.env.ENV_DB, {
+            useNewUrlParser: true,
+            useUnifiedTopology: true,
         });
-        yield mgrequest.save();
-        console.log(mgrequest.body); // "Connected to DB babeeee!"
     });
 }
-// app.get('/:bin_path/:mongo_id', async (request, response) => {
-//   const mongoId = request.params.mongo_id
-//   // we are supposed to search by key?
-//   let singleRequest = await Request.find({key:`${mongoId}`}).exec();
-//   console.log('### Mongo QUERIED 123');
-//   console.log(mongoId)
-//   console.log(singleRequest)
-//   response.send(singleRequest)
-// })
 app.use(cors({
     origin: 'http://localhost:3002', // Replace with your client's origin
 }));
@@ -59,37 +46,28 @@ app.get('/', (req, res) => {
 });
 io.on('connection', (socket) => {
     console.log('A user connected');
-    socket.emit("message", "hello");
+    socket.join("room 1");
     socket.on('disconnect', () => {
         console.log('user disconnected');
     });
 });
-app.put('/api/postman', (req, res) => {
+app.put('/api/postman', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     // accept postman put request
     // publish this request.body data via websocket emit
-    // const data: string = req.body
-    io.emit("message", "hello");
+    // .find().sort({_id: -1}).limit(5)
+    const data = req.body;
+    console.log(data);
+    const currentRequest = new MgRequest({
+        room: {
+            roomName: "room 1",
+            roomData: data,
+        },
+    });
+    const savedRequest = yield currentRequest.save();
+    io.to("room 1").emit("message", data);
     console.log('SENT POSTMAN MESSAGE');
     res.send('ok');
-});
-// io.on('connection', (socket) => {
-// 	console.log('A user connected');
-// 	socket.emit("message", "hello");
-// });
-// io.on('connect', (socket) => {
-// 	const msg: string = 'YOO! a user connected';
-// 	console.log(msg);
-// 	socket.emit("message", "hello");
-// 	// // event fored when `socket emit` is invoked in index.html
-// 	// socket.on('chat message', (msg) => {
-// 	// 	console.log('message:', msg);
-// 	// 	io.emit('chat message', msg);
-// 	// })
-// 	// event fired when connection is lost
-// 	socket.on('disconnect', () => {
-// 		console.log('a user disconnected');
-// 	})
-// });
+}));
 httpServer.listen(PORT, () => {
     console.log('listening on port', PORT);
 });

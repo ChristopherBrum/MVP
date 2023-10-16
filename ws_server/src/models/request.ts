@@ -2,25 +2,17 @@
 import { Document, Schema, model } from 'mongoose';
 
 interface IMgRequest extends Document<any> {
-  key: string;
-  header: string;
-  body: string;
+  room: {
+    roomName: string,
+    roomData: string[]
+  },
 }
 
-// const requestSchema = new mongoose.Schema({
 const requestSchema = new Schema<IMgRequest>({
-  key: {
-    type: String,
+  room: {
+    type: Object,
     required: true
-  },
-  header: {
-    type: String,
-    required: true
-  },
-	body: {
-    type: String,
-    required: false
-  },
+  }
 })
 
 // requestSchema.set('toJSON', {
@@ -35,4 +27,3 @@ const MgRequest = model<IMgRequest>('MgRequest', requestSchema);
 
 
 module.exports = MgRequest
-// module.exports = mongoose.model('Request', requestSchema)

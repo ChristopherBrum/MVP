@@ -3,15 +3,12 @@ const socket = io('http://localhost:3001');
 
 // Handle successful connection
 socket.on("message", (msg) => {
-	const item = document.createElement('li');
-	item.textContent = msg;
-	messages.appendChild(item);
-	window.scrollTo(0, document.body.scrollHeight);
+  console.log(msg);
+  const item = document.createElement('li');
+  item.textContent = msg["hi"];
+  messages.appendChild(item);
+  window.scrollTo(0, document.body.scrollHeight);
 });
-
-// socket.on('chat message', (msg) => {
-
-// });
 
 // // const form = document.getElementById('form');
 // // const input = document.getElementById('input');
@@ -26,14 +23,3 @@ socket.on("message", (msg) => {
 // // 		input.value = '';
 // // 	}
 // // });
-
-// socket.on('connection', (msg) => {
-// 	console.log('CONNECTION ACHIEVED!')
-// });
-
-// socket.on('chat message', (msg) => {
-// 	const item = document.createElement('li');
-// 	item.textContent = msg;
-// 	messages.appendChild(item);
-// 	window.scrollTo(0, document.body.scrollHeight);
-// });
