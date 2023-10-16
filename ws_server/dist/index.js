@@ -18,6 +18,7 @@ const httpServer = (0, http_1.createServer)(app);
 const { connect } = require("mongoose");
 require("dotenv").config();
 const MgRequest = require('./models/request');
+const connectionState = {};
 // code from Mongoose Typescript Support
 run().catch(err => console.log(err));
 // Connect to MongoDB
@@ -46,7 +47,16 @@ app.get('/', (req, res) => {
 });
 io.on('connection', (socket) => {
     console.log('A user connected');
+    // check to see if this session_id was recently active 
+    // and if their previous disconnection was intentional
     socket.join("room 1");
+    socket.on("disconnecting", (reason) => {
+        console.log(socket.rooms); // Set { ... }
+        console.log(reason);
+        if (reason === "client namespace disconnect") {
+            // push an object with session_id and unintentionalDisconnect 
+        }
+    });
     socket.on('disconnect', () => {
         console.log('user disconnected');
     });

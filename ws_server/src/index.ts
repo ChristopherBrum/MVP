@@ -10,6 +10,8 @@ require("dotenv").config();
 
 const MgRequest = require('./models/request')
 
+const connectionState = false;
+
 // code from Mongoose Typescript Support
 run().catch(err => console.log(err));
 
@@ -68,13 +70,25 @@ app.get('/', (req: Request, res: Response) => {
 
 io.on('connection', (socket) => {
   console.log('A user connected');
+  // check to see if this session_id was recently active 
+  // and if their previous disconnection was intentional
 
   socket.join("room 1");
+  
+  socket.on("disconnecting", (reason) => {
+    console.log(socket.rooms); // Set { ... }
+    console.log(reason);
+
+    if (reason === "client namespace disconnect") {
+      // push an object with session_id and unintentionalDisconnect 
+    }
+  });
 
   socket.on('disconnect', () => {
     console.log('user disconnected');
   });
 });
+
 
 app.put('/api/postman', async (req: Request, res: Response) => {
   // accept postman put request
