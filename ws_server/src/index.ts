@@ -1,6 +1,7 @@
 import { Request, Response } from "express";
 import { createServer } from "http";
 import { Server } from "socket.io";
+import { Document } from 'mongoose';
 const express = require('express');
 const app = express();
 const cors = require('cors');
@@ -9,8 +10,6 @@ const { connect } = require("mongoose");
 require("dotenv").config();
 
 const MgRequest = require('./models/request')
-
-const connectionState = false;
 
 // code from Mongoose Typescript Support
 run().catch(err => console.log(err));
@@ -21,7 +20,6 @@ async function run() {
     useNewUrlParser: true,
     useUnifiedTopology: true,
   });
-
 }
 
 app.use(cors({
@@ -37,9 +35,21 @@ interface ServerToClientEvents {
   withAck: (d: string, callback: (e: number) => void) => void;
 }
 
+interface RoomData {
+  hi: string;
+}
+
+interface IMgRequest extends Document<any> {
+  room: {
+    roomName: string,
+    roomData: RoomData
+  },
+}
+
 interface ClientToServerEvents {
   hello: () => void;
-  message: (message: string) => void;
+  message: (message: String) => void;
+  connect_message: (message: RoomData) => void;
 }
 
 interface InterServerEvents {
@@ -68,18 +78,37 @@ app.get('/', (req: Request, res: Response) => {
   res.send('Nice work')
 });
 
-io.on('connection', (socket) => {
-  console.log('A user connected');
+let reconnect: boolean = false;
+
+const fetchMessages = async () => {
+  let messageArr: IMgRequest[] = await MgRequest.find().sort({_id: -1}).limit(5);
+  return messageArr;
+}
+
+io.on('connection', async (socket) => {
+  if (reconnect) {
+    console.log('A user re-connected');
+    socket.join("room 1");
+    let messageArr = await fetchMessages();
+    console.log(messageArr);
+    messageArr.forEach(message => {
+      console.log(message)
+      let msg = message.room.roomData
+      socket.emit("connect_message", msg);
+    });
+  } else { 
+    console.log('A user connected first time');
+    socket.join("room 1");
+  }
   // check to see if this session_id was recently active 
   // and if their previous disconnection was intentional
 
-  socket.join("room 1");
-  
   socket.on("disconnecting", (reason) => {
     console.log(socket.rooms); // Set { ... }
     console.log(reason);
 
     if (reason === "client namespace disconnect") {
+      reconnect = true;
       // push an object with session_id and unintentionalDisconnect 
     }
   });
@@ -89,11 +118,9 @@ io.on('connection', (socket) => {
   });
 });
 
-
 app.put('/api/postman', async (req: Request, res: Response) => {
   // accept postman put request
   // publish this request.body data via websocket emit
-  // .find().sort({_id: -1}).limit(5)
   const data: string = req.body;
   console.log(data);
 

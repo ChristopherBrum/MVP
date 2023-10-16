@@ -8,12 +8,12 @@ const requestSchema = new mongoose_1.Schema({
         required: true
     }
 });
-// requestSchema.set('toJSON', {
-//   transform: (document, returnedObject) => {
-//     returnedObject.id = returnedObject._id.toString()
-//     delete returnedObject._id
-//     delete returnedObject.__v
-//   }
-// })
+requestSchema.set('toJSON', {
+    transform: (document, returnedObject) => {
+        // returnedObject.id = returnedObject._id.toString()
+        delete returnedObject._id;
+        delete returnedObject.__v;
+    }
+});
 const MgRequest = (0, mongoose_1.model)('MgRequest', requestSchema);
 module.exports = MgRequest;

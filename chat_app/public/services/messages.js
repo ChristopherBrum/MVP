@@ -10,6 +10,14 @@ socket.on("message", (msg) => {
   window.scrollTo(0, document.body.scrollHeight);
 });
 
+socket.on("connect_message", (msg) => {
+  console.log(msg);
+  const item = document.createElement('li');
+  item.textContent = msg["hi"];
+  messages.appendChild(item);
+  window.scrollTo(0, document.body.scrollHeight);
+});
+
 // socket.on("message", (msg) => {
 //   console.log(msg);
 //   const item = document.createElement('li');
