@@ -3,7 +3,6 @@ const socket = io('http://localhost:3001');
 
 // Handle successful connection
 socket.on("message", (msg) => {
-  console.log(msg);
   const item = document.createElement('li');
   item.textContent = msg["hi"];
   messages.appendChild(item);
@@ -11,12 +10,18 @@ socket.on("message", (msg) => {
 });
 
 socket.on("connect_message", (msg) => {
-  console.log(msg);
   const item = document.createElement('li');
   item.textContent = msg["hi"];
   messages.appendChild(item);
   window.scrollTo(0, document.body.scrollHeight);
 });
+
+// session listener emitted upon user connecting for the first time
+socket.on("session", ({ sessionId }) => {
+  socket.auth = { sessionId };
+  localStorage.setItem("sessionId", sessionId);
+})
+
 
 // socket.on("message", (msg) => {
 //   console.log(msg);
@@ -35,9 +40,9 @@ socket.on("connect_message", (msg) => {
 
 const disconnectBtn = document.getElementById('disconnect');
 disconnectBtn.addEventListener('click', (e) => {
-	e.preventDefault();
-	socket.disconnect();
-	socket.connect();
+  e.preventDefault();
+  socket.disconnect();
+  socket.connect();
 });
 
 // socket.on("disconnect", (reason) => {
