@@ -88,6 +88,7 @@ const fetchMessages = () => __awaiter(void 0, void 0, void 0, function* () {
     let messageArr = yield MgRequest.find().sort({ _id: -1 }).limit(5);
     return messageArr;
 });
+
 // --------- atLeastOnce logic helper Fns START ---------//
 const fetchMissedEvents = (offset) => __awaiter(void 0, void 0, void 0, function* () {
     console.log('#fetchMissedEvents Offset passed', offset);
@@ -100,6 +101,15 @@ const fetchMissedEvents = (offset) => __awaiter(void 0, void 0, void 0, function
 //   return messageArr;
 // }
 // --------- atLeastOnce logic helper Fns END ---------//
+
+// const fetchLastFive = (socket) => __awaiter(void 0, void 0, void 0, function* () {
+//     let messageArr = yield fetchMessages();
+//     messageArr.forEach(message => {
+//         let msg = message.room.roomData;
+//         socket.emit("connect_message", msg);
+//     });
+// });
+
 io.use((socket, next) => {
     const currentSessionID = socket.handshake.auth.sessionId;
     console.log("Middleware executed");
@@ -110,6 +120,7 @@ io.use((socket, next) => {
         const session = currentSessions.find(obj => obj.sessionId === currentSessionID);
         if (session) {
             socket.data.sessionId = session.sessionId;
+            reconnect = true;
             return next();
         }
     }
@@ -122,6 +133,7 @@ io.on('connection', (socket) => __awaiter(void 0, void 0, void 0, function* () {
     if (reconnect) {
         console.log('A user re-connected');
         socket.join("room 1");
+
         console.log('Offset when reconnected:', socket.handshake.auth.offset);
         // let messageArr = await fetchMessages();
         let messageArr = yield fetchMissedEvents(socket.handshake.auth.offset);
@@ -130,6 +142,9 @@ io.on('connection', (socket) => __awaiter(void 0, void 0, void 0, function* () {
             let msg = message.room.roomData;
             socket.emit("connect_message", msg);
         });
+
+//         fetchLastFive(socket);
+
     }
     else {
         console.log('A user connected first time');
@@ -140,12 +155,6 @@ io.on('connection', (socket) => __awaiter(void 0, void 0, void 0, function* () {
             sessionId: socket.data.sessionId,
         });
     }
-    socket.on("disconnecting", (reason) => {
-        if (reason === "client namespace disconnect") {
-            reconnect = true;
-            // push an object with session_id and unintentionalDisconnect
-        }
-    });
     socket.on('disconnect', () => {
         console.log('user disconnected');
     });
