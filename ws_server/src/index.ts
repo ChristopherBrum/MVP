@@ -1,6 +1,6 @@
 import { Request, Response } from "express";
 import { createServer } from "http";
-import { Server } from "socket.io";
+import { Server, Socket } from "socket.io";
 import { Document } from 'mongoose';
 import { v4 as uuid4 } from 'uuid';
 const express = require('express');
@@ -143,8 +143,16 @@ const fetchMessages = async () => {
   return messageArr;
 }
 
+const fetchLastFive = async (socket: Socket) => {
+  let messageArr = await fetchMessages();
+  messageArr.forEach(message => {
+    let msg = message.room.roomData
+    socket.emit("connect_message", msg);
+  });
+}
+
 io.use((socket, next) => {
-  const currentSessionID = socket.handshake.auth.sessionId;
+  const currentSessionID = socket.handshake.auth.sessionId
   console.log("Middleware executed");
   console.log(currentSessionID);
   console.log(currentSessions);
@@ -154,6 +162,7 @@ io.use((socket, next) => {
     const session = currentSessions.find(obj => obj.sessionId === currentSessionID);
     if (session) {
       socket.data.sessionId = session.sessionId;
+      reconnect = true;
       return next();
     }
   }
@@ -173,11 +182,7 @@ io.on('connection', async (socket) => {
 
     socket.join("room 1");
 
-    let messageArr = await fetchMessages();
-    messageArr.forEach(message => {
-      let msg = message.room.roomData
-      socket.emit("connect_message", msg);
-    });
+    fetchLastFive(socket);
 
   } else {
     console.log('A user connected first time');
@@ -187,15 +192,6 @@ io.on('connection', async (socket) => {
       sessionId: socket.data.sessionId,
     })
   }
-
-
-  socket.on("disconnecting", (reason) => {
-
-    if (reason === "client namespace disconnect") {
-      reconnect = true;
-      // push an object with session_id and unintentionalDisconnect
-    }
-  });
 
   socket.on('disconnect', () => {
     console.log('user disconnected');
@@ -234,4 +230,4 @@ app.put('/api/postman', async (req: Request, res: Response) => {
 
 httpServer.listen(PORT, () => {
   console.log('listening on port', PORT);
-})
+});

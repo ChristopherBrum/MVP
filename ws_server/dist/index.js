@@ -88,6 +88,13 @@ const fetchMessages = () => __awaiter(void 0, void 0, void 0, function* () {
     let messageArr = yield MgRequest.find().sort({ _id: -1 }).limit(5);
     return messageArr;
 });
+const fetchLastFive = (socket) => __awaiter(void 0, void 0, void 0, function* () {
+    let messageArr = yield fetchMessages();
+    messageArr.forEach(message => {
+        let msg = message.room.roomData;
+        socket.emit("connect_message", msg);
+    });
+});
 io.use((socket, next) => {
     const currentSessionID = socket.handshake.auth.sessionId;
     console.log("Middleware executed");
@@ -98,6 +105,7 @@ io.use((socket, next) => {
         const session = currentSessions.find(obj => obj.sessionId === currentSessionID);
         if (session) {
             socket.data.sessionId = session.sessionId;
+            reconnect = true;
             return next();
         }
     }
@@ -110,11 +118,7 @@ io.on('connection', (socket) => __awaiter(void 0, void 0, void 0, function* () {
     if (reconnect) {
         console.log('A user re-connected');
         socket.join("room 1");
-        let messageArr = yield fetchMessages();
-        messageArr.forEach(message => {
-            let msg = message.room.roomData;
-            socket.emit("connect_message", msg);
-        });
+        fetchLastFive(socket);
     }
     else {
         console.log('A user connected first time');
@@ -123,12 +127,6 @@ io.on('connection', (socket) => __awaiter(void 0, void 0, void 0, function* () {
             sessionId: socket.data.sessionId,
         });
     }
-    socket.on("disconnecting", (reason) => {
-        if (reason === "client namespace disconnect") {
-            reconnect = true;
-            // push an object with session_id and unintentionalDisconnect
-        }
-    });
     socket.on('disconnect', () => {
         console.log('user disconnected');
     });
