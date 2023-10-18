@@ -21,6 +21,44 @@ require("dotenv").config();
 const MgRequest = require('./models/request');
 // code from Mongoose Typescript Support
 run().catch(err => console.log(err));
+////////// DynamoDB test /////////
+const client_dynamodb_1 = require("@aws-sdk/client-dynamodb");
+const lib_dynamodb_1 = require("@aws-sdk/lib-dynamodb");
+const credential_providers_1 = require("@aws-sdk/credential-providers");
+const clientConfig = { credentials: (0, credential_providers_1.fromEnv)() };
+const client = new client_dynamodb_1.DynamoDBClient(clientConfig);
+const docClient = lib_dynamodb_1.DynamoDBDocumentClient.from(client);
+const pushToDynamo = () => __awaiter(void 0, void 0, void 0, function* () {
+    const command = new lib_dynamodb_1.PutCommand({
+        TableName: "Rooms",
+        Item: {
+            Id: "A",
+            Message: "I'm sending a message to DynamoDB",
+        },
+    });
+    try {
+        const response = yield docClient.send(command);
+        console.log("response:", response);
+        return response;
+    }
+    catch (error) {
+        console.error(error);
+    }
+});
+const readFromDynamo = () => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const command = new client_dynamodb_1.ScanCommand({ TableName: "Rooms" });
+        const response = yield client.send(command);
+        console.log("response.Items:", response.Items);
+        return response;
+    }
+    catch (error) {
+        console.error(error);
+    }
+});
+pushToDynamo();
+setTimeout(() => readFromDynamo(), 5000);
+////////// DynamoDB test end //////////
 // Connect to MongoDB
 function run() {
     return __awaiter(this, void 0, void 0, function* () {

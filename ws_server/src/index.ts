@@ -15,6 +15,50 @@ const MgRequest = require('./models/request')
 // code from Mongoose Typescript Support
 run().catch(err => console.log(err));
 
+////////// DynamoDB test /////////
+
+import { DynamoDBClient, DynamoDBClientConfig, ScanCommand } from "@aws-sdk/client-dynamodb";
+import { PutCommand, DynamoDBDocumentClient } from "@aws-sdk/lib-dynamodb";
+import { fromEnv } from "@aws-sdk/credential-providers";
+
+const clientConfig: DynamoDBClientConfig = { credentials: fromEnv() };
+const client = new DynamoDBClient(clientConfig);
+const docClient = DynamoDBDocumentClient.from(client);
+
+const pushToDynamo = async () => {
+  const command = new PutCommand({
+    TableName: "Rooms",
+    Item: {
+      Id: "A",
+      Message: "I'm sending a message to DynamoDB",
+    },
+  });
+
+  try {
+    const response = await docClient.send(command);
+    console.log("response:", response);
+    return response;
+  } catch (error) {
+    console.error(error);
+  }
+};
+
+const readFromDynamo = async () => {
+  try {
+    const command = new ScanCommand({ TableName: "Rooms" });
+    const response = await client.send(command);
+    console.log("response.Items:", response.Items);
+    return response;
+  } catch (error) {
+    console.error(error);
+  }
+};
+
+pushToDynamo();
+setTimeout(() => readFromDynamo(), 5000);
+
+////////// DynamoDB test end //////////
+
 // Connect to MongoDB
 async function run() {
   await connect(process.env.ENV_DB, {
