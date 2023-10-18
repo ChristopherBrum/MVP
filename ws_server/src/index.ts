@@ -10,54 +10,11 @@ const httpServer = createServer(app);
 const { connect } = require("mongoose");
 require("dotenv").config();
 
+import dynamoService from "./db/dynamoService";
 const MgRequest = require('./models/request')
 
 // code from Mongoose Typescript Support
 run().catch(err => console.log(err));
-
-////////// DynamoDB test /////////
-
-import { DynamoDBClient, DynamoDBClientConfig, ScanCommand } from "@aws-sdk/client-dynamodb";
-import { PutCommand, DynamoDBDocumentClient } from "@aws-sdk/lib-dynamodb";
-import { fromEnv } from "@aws-sdk/credential-providers";
-
-const clientConfig: DynamoDBClientConfig = { credentials: fromEnv() };
-const client = new DynamoDBClient(clientConfig);
-const docClient = DynamoDBDocumentClient.from(client);
-
-const pushToDynamo = async () => {
-  const command = new PutCommand({
-    TableName: "Rooms",
-    Item: {
-      Id: "A",
-      Message: "I'm sending a message to DynamoDB",
-    },
-  });
-
-  try {
-    const response = await docClient.send(command);
-    console.log("response:", response);
-    return response;
-  } catch (error) {
-    console.error(error);
-  }
-};
-
-const readFromDynamo = async () => {
-  try {
-    const command = new ScanCommand({ TableName: "Rooms" });
-    const response = await client.send(command);
-    console.log("response.Items:", response.Items);
-    return response;
-  } catch (error) {
-    console.error(error);
-  }
-};
-
-pushToDynamo();
-setTimeout(() => readFromDynamo(), 5000);
-
-////////// DynamoDB test end //////////
 
 // Connect to MongoDB
 async function run() {
@@ -131,7 +88,6 @@ const io = new Server<
     methods: ['GET', 'POST'],
   },
 });
-
 
 // WS Server Logic
 
@@ -267,6 +223,19 @@ app.put('/api/postman', async (req: Request, res: Response) => {
   console.log('SENT POSTMAN MESSAGE');
 
   res.send('ok');
+});
+
+// need create an interface for the request body
+app.post('/api/postman/dynamo', async (req: Request, res: Response) => {
+  try {
+    const data: any = req.body;  // specify the actual type
+    const dynamoResponse: any = await dynamoService.createMessage(data.RoomId, data.Message) // specify the actual type
+    console.log('SENT POSTMAN MESSAGE:', data.Message);
+    io.to("room 1").emit("message", data.Message);
+    res.status(dynamoResponse['$metadata']['httpStatusCode']).send('ok');
+  } catch (error) {
+    console.log(error);
+  }
 });
 
 httpServer.listen(PORT, () => {

@@ -8,6 +8,9 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         step((generator = generator.apply(thisArg, _arguments || [])).next());
     });
 };
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 const http_1 = require("http");
 const socket_io_1 = require("socket.io");
@@ -18,47 +21,10 @@ const cors = require('cors');
 const httpServer = (0, http_1.createServer)(app);
 const { connect } = require("mongoose");
 require("dotenv").config();
+const dynamoService_1 = __importDefault(require("./db/dynamoService"));
 const MgRequest = require('./models/request');
 // code from Mongoose Typescript Support
 run().catch(err => console.log(err));
-////////// DynamoDB test /////////
-const client_dynamodb_1 = require("@aws-sdk/client-dynamodb");
-const lib_dynamodb_1 = require("@aws-sdk/lib-dynamodb");
-const credential_providers_1 = require("@aws-sdk/credential-providers");
-const clientConfig = { credentials: (0, credential_providers_1.fromEnv)() };
-const client = new client_dynamodb_1.DynamoDBClient(clientConfig);
-const docClient = lib_dynamodb_1.DynamoDBDocumentClient.from(client);
-const pushToDynamo = () => __awaiter(void 0, void 0, void 0, function* () {
-    const command = new lib_dynamodb_1.PutCommand({
-        TableName: "Rooms",
-        Item: {
-            Id: "A",
-            Message: "I'm sending a message to DynamoDB",
-        },
-    });
-    try {
-        const response = yield docClient.send(command);
-        console.log("response:", response);
-        return response;
-    }
-    catch (error) {
-        console.error(error);
-    }
-});
-const readFromDynamo = () => __awaiter(void 0, void 0, void 0, function* () {
-    try {
-        const command = new client_dynamodb_1.ScanCommand({ TableName: "Rooms" });
-        const response = yield client.send(command);
-        console.log("response.Items:", response.Items);
-        return response;
-    }
-    catch (error) {
-        console.error(error);
-    }
-});
-pushToDynamo();
-setTimeout(() => readFromDynamo(), 5000);
-////////// DynamoDB test end //////////
 // Connect to MongoDB
 function run() {
     return __awaiter(this, void 0, void 0, function* () {
@@ -183,6 +149,19 @@ app.put('/api/postman', (req, res) => __awaiter(void 0, void 0, void 0, function
     io.to("room 1").emit("message", messageData);
     console.log('SENT POSTMAN MESSAGE');
     res.send('ok');
+}));
+// need create an interface for the request body
+app.post('/api/postman/dynamo', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const data = req.body; // specify the actual type
+        const dynamoResponse = yield dynamoService_1.default.createMessage(data.RoomId, data.Message); // specify the actual type
+        console.log('SENT POSTMAN MESSAGE:', data.Message);
+        io.to("room 1").emit("message", data.Message);
+        res.status(dynamoResponse['$metadata']['httpStatusCode']).send('ok');
+    }
+    catch (error) {
+        console.log(error);
+    }
 }));
 httpServer.listen(PORT, () => {
     console.log('listening on port', PORT);
