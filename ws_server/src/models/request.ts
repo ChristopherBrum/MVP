@@ -12,12 +12,22 @@ interface IMgRequest extends Document<any> {
   },
 }
 
+// const requestSchema = new Schema<IMgRequest>({
+//   room: {
+//     type: Object,
+//     required: true,
+//   }
+// })
+
+// --- atLeastOnce logic
+// creating a timestamp via Mongoose
 const requestSchema = new Schema<IMgRequest>({
   room: {
     type: Object,
-    required: true
-  }
-})
+    required: true,
+  }},
+  { timestamps: true }, // creates timestamp
+)
 
 requestSchema.set('toJSON', {
   transform: (document: Document<any>, returnedObject: Document<any>) => {
