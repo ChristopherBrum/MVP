@@ -88,6 +88,18 @@ const fetchMessages = () => __awaiter(void 0, void 0, void 0, function* () {
     let messageArr = yield MgRequest.find().sort({ _id: -1 }).limit(5);
     return messageArr;
 });
+// --------- atLeastOnce logic helper Fns START ---------//
+const fetchMissedEvents = (offset) => __awaiter(void 0, void 0, void 0, function* () {
+    console.log('#fetchMissedEvents Offset passed', offset);
+    let messageArr = yield MgRequest.find({ createdAt: { $gt: offset } });
+    return messageArr;
+});
+// const fetchMissedEvents = async (offset: Date) => {
+//   let rName = "room 1";
+//   let messageArr: IMgRequest[] = await MgRequest.find({ 'room.roomName': "room 1", 'room.timestamp': {$gt: `offset`} });
+//   return messageArr;
+// }
+// --------- atLeastOnce logic helper Fns END ---------//
 io.use((socket, next) => {
     const currentSessionID = socket.handshake.auth.sessionId;
     console.log("Middleware executed");
@@ -110,7 +122,10 @@ io.on('connection', (socket) => __awaiter(void 0, void 0, void 0, function* () {
     if (reconnect) {
         console.log('A user re-connected');
         socket.join("room 1");
-        let messageArr = yield fetchMessages();
+        console.log('Offset when reconnected:', socket.handshake.auth.offset);
+        // let messageArr = await fetchMessages();
+        let messageArr = yield fetchMissedEvents(socket.handshake.auth.offset);
+        console.log('fetched missed messages', messageArr);
         messageArr.forEach(message => {
             let msg = message.room.roomData;
             socket.emit("connect_message", msg);
@@ -119,6 +134,8 @@ io.on('connection', (socket) => __awaiter(void 0, void 0, void 0, function* () {
     else {
         console.log('A user connected first time');
         socket.join("room 1");
+        socket.handshake.auth.offset = undefined;
+        console.log('Initial Offset on first connection:', socket.handshake.auth.offset);
         socket.emit("session", {
             sessionId: socket.data.sessionId,
         });
@@ -133,6 +150,27 @@ io.on('connection', (socket) => __awaiter(void 0, void 0, void 0, function* () {
         console.log('user disconnected');
     });
 }));
+/// atLeastOnce server-side START ////////
+// io.on("connection", async (socket) => {
+//   const offset = socket.handshake.auth.offset;
+//   if (offset) {
+//     // this is a reconnection
+//     for (const event of await fetchMissedEventsFromDatabase(offset)) {
+//       socket.emit("my-event", event);
+//     }
+//   } else {
+//     // this is a first connection
+//   }
+// });
+// setInterval(async () => {
+//   const event = {
+//     id: generateUniqueId(),
+//     data: new Date().toISOString()
+//   }
+//   await persistEventToDatabase(event);
+//   io.emit("my-event", event);
+// }, 1000);
+/// atLeastOnce server-side END ////////
 // Backend API
 app.get('/', (req, res) => {
     console.log("you've got mail!");
@@ -146,11 +184,13 @@ app.put('/api/postman', (req, res) => __awaiter(void 0, void 0, void 0, function
     const currentRequest = new MgRequest({
         room: {
             roomName: "room 1",
-            roomData: data,
+            roomData: data
         },
     });
     const savedRequest = yield currentRequest.save();
-    io.to("room 1").emit("message", data);
+    const timestamp = savedRequest.createdAt;
+    let messageData = [data, timestamp];
+    io.to("room 1").emit("message", messageData);
     console.log('SENT POSTMAN MESSAGE');
     res.send('ok');
 }));
