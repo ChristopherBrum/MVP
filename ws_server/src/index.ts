@@ -1,7 +1,7 @@
 import { Request, Response } from "express";
 import { createServer } from "http";
-import { Server } from "socket.io";
-import { Document } from 'mongoose';
+import { Server, Socket } from "socket.io";
+import { Date, Document } from 'mongoose';
 import { v4 as uuid4 } from 'uuid';
 const express = require('express');
 const app = express();
@@ -55,7 +55,7 @@ interface IMgRequest extends Document<any> {
 
 interface ClientToServerEvents {
   hello: () => void;
-  message: (message: String) => void;
+  message: (message: any[]) => void;
   connect_message: (message: RoomData) => void;
   session: (message: SessionObject) => void;
 }
@@ -68,6 +68,7 @@ interface SocketData {
   name: string;
   age: number;
   sessionId: string;
+  offset: Date; // createdAt is a Mongoose prop of type Date
 }
 
 interface SessionObject {
@@ -94,13 +95,30 @@ let reconnect: boolean = false;
 
 let currentSessions: SessionObject[] = []
 
-const fetchMessages = async () => {
-  let messageArr: IMgRequest[] = await MgRequest.find().sort({ _id: -1 }).limit(5);
+// const fetchMessages = async () => {
+//   let messageArr: IMgRequest[] = await MgRequest.find().sort({ _id: -1 }).limit(5);
+//   return messageArr;
+// }
+
+
+const fetchMissedMessages = async (offset: Date)=> {
+  console.log('#fetchMissedMessages Offset passed', offset)
+  let messageArr: IMgRequest[] = await MgRequest.find({ createdAt: {$gt: offset} });
   return messageArr;
 }
 
+
+// const fetchLastFive = async (socket: Socket) => {
+//   let messageArr = await fetchMessages();
+//   messageArr.forEach(message => {
+//     let msg = message.room.roomData
+//     socket.emit("connect_message", msg);
+//   });
+// }
+
+
 io.use((socket, next) => {
-  const currentSessionID = socket.handshake.auth.sessionId;
+  const currentSessionID = socket.handshake.auth.sessionId
   console.log("Middleware executed");
   console.log(currentSessionID);
   console.log(currentSessions);
@@ -110,6 +128,7 @@ io.use((socket, next) => {
     const session = currentSessions.find(obj => obj.sessionId === currentSessionID);
     if (session) {
       socket.data.sessionId = session.sessionId;
+      reconnect = true;
       return next();
     }
   }
@@ -124,39 +143,55 @@ io.use((socket, next) => {
 
 io.on('connection', async (socket) => {
   if (reconnect) {
-
     console.log('A user re-connected');
-
+    
     socket.join("room 1");
+    
+    let messageArr = await fetchMissedMessages(socket.handshake.auth.offset)
 
-    let messageArr = await fetchMessages();
     messageArr.forEach(message => {
       let msg = message.room.roomData
       socket.emit("connect_message", msg);
     });
 
+//     fetchLastFive(socket);
+
   } else {
     console.log('A user connected first time');
     socket.join("room 1");
-
+    socket.handshake.auth.offset = undefined
     socket.emit("session", {
       sessionId: socket.data.sessionId,
     })
   }
 
-
-  socket.on("disconnecting", (reason) => {
-    if (reason === "client namespace disconnect") {
-      reconnect = true;
-      // push an object with session_id and unintentionalDisconnect
-    }
-  });
-
+//   socket.on("disconnecting", (reason) => {
+//     if (reason === "client namespace disconnect") {
+//       reconnect = true;
+//       // push an object with session_id and unintentionalDisconnect
+//     }
+//   });
+  
   socket.on('disconnect', () => {
     console.log('user disconnected');
   });
 });
 
+/// atLeastOnce server-side START ////////
+
+// io.on("connection", async (socket) => {
+//   const offset = socket.handshake.auth.offset;
+//   if (offset) {
+//     // this is a reconnection
+//     for (const event of await fetchMissedEventsFromDatabase(offset)) {
+//       socket.emit("my-event", event);
+//     }
+//   } else {
+//     // this is a first connection
+//   }
+// });
+
+/// atLeastOnce server-side END ////////
 
 // Backend API
 
@@ -174,13 +209,16 @@ app.put('/api/postman', async (req: Request, res: Response) => {
   const currentRequest = new MgRequest({
     room: {
       roomName: "room 1",
-      roomData: data,
+      roomData: data
     },
   });
 
   const savedRequest = await currentRequest.save();
 
-  io.to("room 1").emit("message", data);
+  const timestamp: Date = savedRequest.createdAt
+  let messageData: any[] = [data, timestamp]
+  
+  io.to("room 1").emit("message", messageData);
 
   console.log('SENT POSTMAN MESSAGE');
 
@@ -202,4 +240,4 @@ app.post('/api/postman/dynamo', async (req: Request, res: Response) => {
 
 httpServer.listen(PORT, () => {
   console.log('listening on port', PORT);
-})
+});

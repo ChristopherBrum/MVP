@@ -50,10 +50,22 @@ const io = new socket_io_1.Server(httpServer, {
 // WS Server Logic
 let reconnect = false;
 let currentSessions = [];
-const fetchMessages = () => __awaiter(void 0, void 0, void 0, function* () {
-    let messageArr = yield MgRequest.find().sort({ _id: -1 }).limit(5);
+// const fetchMessages = async () => {
+//   let messageArr: IMgRequest[] = await MgRequest.find().sort({ _id: -1 }).limit(5);
+//   return messageArr;
+// }
+const fetchMissedMessages = (offset) => __awaiter(void 0, void 0, void 0, function* () {
+    console.log('#fetchMissedMessages Offset passed', offset);
+    let messageArr = yield MgRequest.find({ createdAt: { $gt: offset } });
     return messageArr;
 });
+// const fetchLastFive = async (socket: Socket) => {
+//   let messageArr = await fetchMessages();
+//   messageArr.forEach(message => {
+//     let msg = message.room.roomData
+//     socket.emit("connect_message", msg);
+//   });
+// }
 io.use((socket, next) => {
     const currentSessionID = socket.handshake.auth.sessionId;
     console.log("Middleware executed");
@@ -64,6 +76,7 @@ io.use((socket, next) => {
         const session = currentSessions.find(obj => obj.sessionId === currentSessionID);
         if (session) {
             socket.data.sessionId = session.sessionId;
+            reconnect = true;
             return next();
         }
     }
@@ -76,29 +89,44 @@ io.on('connection', (socket) => __awaiter(void 0, void 0, void 0, function* () {
     if (reconnect) {
         console.log('A user re-connected');
         socket.join("room 1");
-        let messageArr = yield fetchMessages();
+        let messageArr = yield fetchMissedMessages(socket.handshake.auth.offset);
         messageArr.forEach(message => {
             let msg = message.room.roomData;
             socket.emit("connect_message", msg);
         });
+        //     fetchLastFive(socket);
     }
     else {
         console.log('A user connected first time');
         socket.join("room 1");
+        socket.handshake.auth.offset = undefined;
         socket.emit("session", {
             sessionId: socket.data.sessionId,
         });
     }
-    socket.on("disconnecting", (reason) => {
-        if (reason === "client namespace disconnect") {
-            reconnect = true;
-            // push an object with session_id and unintentionalDisconnect
-        }
-    });
+    //   socket.on("disconnecting", (reason) => {
+    //     if (reason === "client namespace disconnect") {
+    //       reconnect = true;
+    //       // push an object with session_id and unintentionalDisconnect
+    //     }
+    //   });
     socket.on('disconnect', () => {
         console.log('user disconnected');
     });
 }));
+/// atLeastOnce server-side START ////////
+// io.on("connection", async (socket) => {
+//   const offset = socket.handshake.auth.offset;
+//   if (offset) {
+//     // this is a reconnection
+//     for (const event of await fetchMissedEventsFromDatabase(offset)) {
+//       socket.emit("my-event", event);
+//     }
+//   } else {
+//     // this is a first connection
+//   }
+// });
+/// atLeastOnce server-side END ////////
 // Backend API
 app.get('/', (req, res) => {
     console.log("you've got mail!");
@@ -112,11 +140,13 @@ app.put('/api/postman', (req, res) => __awaiter(void 0, void 0, void 0, function
     const currentRequest = new MgRequest({
         room: {
             roomName: "room 1",
-            roomData: data,
+            roomData: data
         },
     });
     const savedRequest = yield currentRequest.save();
-    io.to("room 1").emit("message", data);
+    const timestamp = savedRequest.createdAt;
+    let messageData = [data, timestamp];
+    io.to("room 1").emit("message", messageData);
     console.log('SENT POSTMAN MESSAGE');
     res.send('ok');
 }));
