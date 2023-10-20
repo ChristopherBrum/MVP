@@ -20,8 +20,6 @@ interface IMgRequest extends Document<any> {
   },
 }
 
-let reconnect: boolean = false;
-
 let currentSessions: SessionObject[] = []
 
 const fetchMissedMessages = async (offset: Date) => {
@@ -30,40 +28,39 @@ const fetchMissedMessages = async (offset: Date) => {
   return messageArr;
 }
 
+const isReconnect = (socket: Socket) => {
+  const currentSessionID = socket.handshake.auth.sessionId
+  return currentSessions.find(obj => obj.sessionId === currentSessionID);
+}
 
 export const sessionIdMiddleware = (socket: Socket, next: NextFunction) => {
-  const currentSessionID = socket.handshake.auth.sessionId
+  const session = isReconnect(socket);
 
-  console.log('\n')
-  console.log('######## NEW TEST ##########')
-  console.log("Middleware executed");
-  // console.log(socket.data.sessionId);
-  console.log("currentSessionID:", currentSessionID);
-  console.log(currentSessions);
-  console.log('\n');
+  // console.log('\n')
+  // console.log('######## NEW TEST ##########')
+  // console.log("Middleware executed");
+  // // console.log("currentSessionID:", currentSessionID);
+  // console.log("currentSessionId:", socket.handshake.auth.sessionId);
+  // console.log(currentSessions);
+  // console.log('\n');
 
-  if (currentSessionID) {
-    const session = currentSessions.find(obj => obj.sessionId === currentSessionID);
-    if (session) {
-      socket.data.sessionId = session.sessionId;
-      reconnect = true;
-      return next();
-    }
+
+  if (session) {
+    socket.data.sessionId = session.sessionId;
+    return next();
   }
+
   let randomID = uuid4();
 
   socket.data.sessionId = randomID;
 
   currentSessions.push({ sessionId: randomID });
 
-  // console.log(currentSessions);
-  // console.log('\n');
-
   next();
 }
 
 export const handleConnection = async (socket: Socket) => {
-  if (reconnect) {
+  if (isReconnect(socket)) {
     console.log('A user re-connected');
 
     socket.join("room 1");
@@ -101,11 +98,3 @@ export const handleConnection = async (socket: Socket) => {
 // });
 
 /// atLeastOnce server-side END ////////
-
-// const fetchLastFive = async (socket: Socket) => {
-//   let messageArr = await fetchMessages();
-//   messageArr.forEach(message => {
-//     let msg = message.room.roomData
-//     socket.emit("connect_message", msg);
-//   });
-// }

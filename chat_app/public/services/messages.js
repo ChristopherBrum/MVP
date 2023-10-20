@@ -26,7 +26,7 @@ socket.on("message", (messageData) => {
 });
 
 socket.on("connect_message", (msg) => {
-  // socket.auth.offset = timestamp; // w/o this update, user will always receive messages from a specific point in time on
+  socket.auth.offset = timestamp; // w/o this update, user may always receive messages from a specific point in time on
   const item = document.createElement('li');
   item.textContent = msg["hi"];
   messages.appendChild(item);
@@ -39,32 +39,6 @@ socket.on("session", ({ sessionId }) => {
   localStorage.setItem("sessionId", sessionId);
 })
 
-// ----- atLeastOnce server-side START ---------//
-
-
-// Client
-// const socket = io({
-//   auth: {
-//     offset: undefined
-//   }
-// });
-
-// socket.on("my-event", ({ timestamp, data }) => {
-//   // do something with the data, and then update the offset
-//   socket.auth.offset = timestamp;
-// });
-
-
-// ----- atLeastOnce server-side END ---------//
-
-
-// socket.on("message", (msg) => {
-//   console.log(msg);
-//   const item = document.createElement('li');
-//   item.textContent = msg["hi"];
-//   messages.appendChild(item);
-//   window.scrollTo(0, document.body.scrollHeight);
-// });
 
 // // const form = document.getElementById('form');
 // // const input = document.getElementById('input');

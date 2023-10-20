@@ -12,40 +12,47 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.handleConnection = exports.sessionIdMiddleware = void 0;
 const uuid_1 = require("uuid");
 const MgRequest = require('../db/mongoService');
-let reconnect = false;
+/*
+- currentSessionId and if session are currently redundant
+- can remove (comment out) if statement on line 52 and see if still works
+
+-
+*/
+// let reconnect: boolean = false;
 let currentSessions = [];
 const fetchMissedMessages = (offset) => __awaiter(void 0, void 0, void 0, function* () {
     console.log('#fetchMissedMessages Offset passed', offset);
     let messageArr = yield MgRequest.find({ createdAt: { $gt: offset } });
     return messageArr;
 });
-const sessionIdMiddleware = (socket, next) => {
+const isReconnect = (socket) => {
     const currentSessionID = socket.handshake.auth.sessionId;
+    return currentSessions.find(obj => obj.sessionId === currentSessionID);
+};
+const sessionIdMiddleware = (socket, next) => {
+    // const currentSessionID = socket.handshake.auth.sessionId
+    // const session = currentSessions.find(obj => obj.sessionId === currentSessionID);
+    const session = isReconnect(socket);
     console.log('\n');
     console.log('######## NEW TEST ##########');
     console.log("Middleware executed");
-    // console.log(socket.data.sessionId);
-    console.log("currentSessionID:", currentSessionID);
+    // console.log("currentSessionID:", currentSessionID);
+    console.log("currentSessionId:", socket.handshake.auth.sessionId);
     console.log(currentSessions);
     console.log('\n');
-    if (currentSessionID) {
-        const session = currentSessions.find(obj => obj.sessionId === currentSessionID);
-        if (session) {
-            socket.data.sessionId = session.sessionId;
-            reconnect = true;
-            return next();
-        }
+    if (session) {
+        socket.data.sessionId = session.sessionId;
+        // reconnect = true;
+        return next();
     }
     let randomID = (0, uuid_1.v4)();
     socket.data.sessionId = randomID;
     currentSessions.push({ sessionId: randomID });
-    // console.log(currentSessions);
-    // console.log('\n');
     next();
 };
 exports.sessionIdMiddleware = sessionIdMiddleware;
 const handleConnection = (socket) => __awaiter(void 0, void 0, void 0, function* () {
-    if (reconnect) {
+    if (isReconnect(socket)) {
         console.log('A user re-connected');
         socket.join("room 1");
         let messageArr = yield fetchMissedMessages(socket.handshake.auth.offset);
