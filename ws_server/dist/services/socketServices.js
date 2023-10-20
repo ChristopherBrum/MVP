@@ -38,7 +38,14 @@ const sessionIdMiddleware = (socket, next) => {
     next();
 };
 exports.sessionIdMiddleware = sessionIdMiddleware;
+// called when io.on(connect)
 const handleConnection = (socket) => __awaiter(void 0, void 0, void 0, function* () {
+    socket.on('join', (roomName) => {
+        socket.join(roomName); // Join the specified room
+        console.log(`Client has joined room: ${roomName}`);
+        // Emit something to the client that just joined the room
+        socket.emit('roomJoined', `You have joined room: ${roomName}`);
+    });
     if (reconnect) {
         console.log('A user re-connected');
         socket.join("room 1");

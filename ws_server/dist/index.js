@@ -9,7 +9,7 @@ const cors = require('cors');
 const httpServer = (0, http_1.createServer)(app);
 require("dotenv").config();
 const { sessionIdMiddleware, handleConnection } = require('./services/socketServices');
-const { homeRoute, mongoPostmanRoute, dynamoPostmanRoute } = require('./services/expressServices');
+const { homeRoute, mongoPostmanRoute, mongoPostmanRoomsRoute, dynamoPostmanRoute } = require('./services/expressServices');
 // Express Middleware
 app.use(cors({
     origin: 'http://localhost:3002', // Replace with your client's origin
@@ -29,6 +29,7 @@ exports.io.on("connection", handleConnection);
 // Backend API
 app.get('/', homeRoute);
 app.put('/api/postman', mongoPostmanRoute);
+app.put('/api/postman/rooms', mongoPostmanRoomsRoute);
 app.post('/api/postman/dynamo', dynamoPostmanRoute);
 // listening on port 3001
 httpServer.listen(PORT, () => {

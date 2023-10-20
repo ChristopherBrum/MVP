@@ -9,9 +9,8 @@ const httpServer = createServer(app);
 
 require("dotenv").config();
 
-
 const { sessionIdMiddleware, handleConnection } = require('./services/socketServices')
-const { homeRoute, mongoPostmanRoute, dynamoPostmanRoute } = require('./services/expressServices')
+const { homeRoute, mongoPostmanRoute, mongoPostmanRoomsRoute, dynamoPostmanRoute } = require('./services/expressServices')
 
 // Express Middleware
 
@@ -32,12 +31,13 @@ interface ServerToClientEvents {
 }
 
 interface RoomData {
-  hi: string;
+  message: string;
 }
 
 interface ClientToServerEvents {
   hello: () => void;
   message: (message: any[]) => void;
+  roomJoined: (message: any[]) => void;
   connect_message: (message: RoomData) => void;
   session: (message: SessionObject) => void;
 }
@@ -80,6 +80,7 @@ io.on("connection", handleConnection)
 
 app.get('/', homeRoute);
 app.put('/api/postman', mongoPostmanRoute);
+app.put('/api/postman/rooms', mongoPostmanRoomsRoute);
 app.post('/api/postman/dynamo', dynamoPostmanRoute);
 
 // listening on port 3001

@@ -44,7 +44,7 @@ socket.on("message", (messageData) => {
   
   const messages = document.getElementById('messages');
   const item = document.createElement('li');
-  item.textContent = msg["hi"];
+  item.textContent = msg["message"];
   messages.appendChild(item);
   window.scrollTo(0, document.body.scrollHeight);
 });
@@ -52,7 +52,7 @@ socket.on("message", (messageData) => {
 socket.on("connect_message", (msg) => {
   // socket.auth.offset = timestamp; // w/o this update, user will always receive messages from a specific point in time on
   const item = document.createElement('li');
-  item.textContent = msg["hi"];
+  item.textContent = msg["message"];
   messages.appendChild(item);
   window.scrollTo(0, document.body.scrollHeight);
 });
@@ -124,8 +124,15 @@ document.addEventListener('DOMContentLoaded', () => {
   const options = document.getElementById('options');
 
   options.addEventListener('change', () => {
-      const selectedOption = options.value;
+    const selectedOption = options.value;
 
-      alert(`You're now in room: ${selectedOption}`);
+    // join room <button value> on change event
+    // server then emits back to roomJoined (below)
+    socket.emit('join', `${selectedOption}`);
   });
+});
+
+// catches roomJoined event
+socket.on('roomJoined', (message) => {
+  console.log(message);
 });

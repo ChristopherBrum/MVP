@@ -12,7 +12,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.dynamoPostmanRoute = exports.mongoPostmanRoute = exports.homeRoute = void 0;
+exports.dynamoPostmanRoute = exports.mongoPostmanRoomsRoute = exports.mongoPostmanRoute = exports.homeRoute = void 0;
 const index_1 = require("../index");
 const { connect } = require("mongoose");
 const MgRequest = require('../db/mongoService');
@@ -52,6 +52,24 @@ const mongoPostmanRoute = (req, res) => __awaiter(void 0, void 0, void 0, functi
     res.send('ok');
 });
 exports.mongoPostmanRoute = mongoPostmanRoute;
+const mongoPostmanRoomsRoute = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const data = req.body;
+    console.log('ROOM AND MESSAGE:', data.room, data.message);
+    const currentRequest = new MgRequest({
+        room: {
+            roomName: data.room,
+            roomData: data.message
+        },
+    });
+    const savedRequest = yield currentRequest.save();
+    const timestamp = savedRequest.createdAt;
+    let messageData = [data, timestamp];
+    // only people in this room should receive this message event
+    index_1.io.to(`${data.room}`).emit("roomJoined", messageData);
+    console.log('SENT POSTMAN MESSAGE');
+    res.send('ok');
+});
+exports.mongoPostmanRoomsRoute = mongoPostmanRoomsRoute;
 const dynamoPostmanRoute = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const data = req.body; // specify the actual type
