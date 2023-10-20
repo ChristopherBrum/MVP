@@ -47,6 +47,11 @@ body {
 	color: #fff; 
 }
 
+#form > button:hover {
+	cursor: pointer;
+	background: #565656;
+}
+
 #messages { 
 	list-style-type: none; 
 	margin: 0; 
@@ -64,4 +69,19 @@ body {
 
 #messages > li:nth-child(odd) { 
 	/* background: #efefef;  */
+}
+
+select {
+	background: #333; 
+	border: none; 
+	padding: 0 1rem; 
+	margin: 0.25rem; 
+	border-radius: 3px; 
+	outline: none; 
+	color: #fff; 
+}
+
+select:hover {
+	cursor: pointer;
+	background: #565656;
 }
