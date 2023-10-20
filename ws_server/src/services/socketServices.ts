@@ -10,7 +10,7 @@ interface SessionObject {
 }
 
 interface RoomData {
-  hi: string;
+  message: string;
 }
 
 interface IMgRequest extends Document<any> {
@@ -59,8 +59,19 @@ export const sessionIdMiddleware = (socket: Socket, next: NextFunction) => {
   next();
 }
 
+// called when io.on(connect)
 export const handleConnection = async (socket: Socket) => {
+
+  socket.on('join', (roomName) => {
+    socket.join(roomName); // Join the specified room
+    console.log(`Client has joined room: ${roomName}`);
+
+    // Emit something to the client that just joined the room
+    socket.emit('roomJoined', `You have joined room: ${roomName}`);
+  });
+
   if (isReconnect(socket)) {
+
     console.log('A user re-connected');
 
     socket.join("room 1");
@@ -81,7 +92,6 @@ export const handleConnection = async (socket: Socket) => {
     })
   }
 }
-
 
 /// atLeastOnce server-side START ////////
 

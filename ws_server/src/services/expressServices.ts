@@ -16,7 +16,6 @@ async function run() {
   });
 }
 
-
 export const homeRoute = (req: Request, res: Response) => {
   console.log("you've got mail!");
   res.send('Nice work')
@@ -41,6 +40,38 @@ export const mongoPostmanRoute = async (req: Request, res: Response) => {
   let messageData: any[] = [data, timestamp]
 
   io.to("room 1").emit("message", messageData);
+
+  console.log('SENT POSTMAN MESSAGE');
+
+  res.send('ok');
+}
+
+export const mongoPostmanRoomsRoute = async (req: Request, res: Response) => {
+  // accept postman put request
+  // publish this request.body data via websocket emit
+  interface jsonData {
+    room: string;
+    message: string;
+  }
+  
+  const data: jsonData = req.body
+
+  console.log('ROOM AND MESSAGE:', data.room, data.message);
+  
+  const currentRequest = new MgRequest({
+    room: {
+      roomName: data.room,
+      roomData: data.message
+    },
+  });
+
+  const savedRequest = await currentRequest.save();
+
+  const timestamp: Date = savedRequest.createdAt
+  let messageData: any[] = [data, timestamp]
+
+  // only people in this room should receive this message event
+  io.to(`${data.room}`).emit("roomJoined", messageData);
 
   console.log('SENT POSTMAN MESSAGE');
 
