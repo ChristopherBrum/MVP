@@ -33,9 +33,14 @@ const fetchMissedMessages = async (offset: Date) => {
 
 export const sessionIdMiddleware = (socket: Socket, next: NextFunction) => {
   const currentSessionID = socket.handshake.auth.sessionId
+
+  console.log('\n')
+  console.log('######## NEW TEST ##########')
   console.log("Middleware executed");
-  console.log(currentSessionID);
+  // console.log(socket.data.sessionId);
+  console.log("currentSessionID:", currentSessionID);
   console.log(currentSessions);
+  console.log('\n');
 
   if (currentSessionID) {
     const session = currentSessions.find(obj => obj.sessionId === currentSessionID);
@@ -50,6 +55,9 @@ export const sessionIdMiddleware = (socket: Socket, next: NextFunction) => {
   socket.data.sessionId = randomID;
 
   currentSessions.push({ sessionId: randomID });
+
+  // console.log(currentSessions);
+  // console.log('\n');
 
   next();
 }

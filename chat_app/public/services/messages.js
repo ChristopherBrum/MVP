@@ -1,21 +1,24 @@
 // Connect to the Socket.IO server
-const socket = io('http://localhost:3001');
+// const socket = io('http://localhost:3001');
+
+// const socket = io('44.212.23.240:3001');
 
 // -----  atLeastOnce logic
-// const socket = io('http://localhost:3001', { 
-//   auth: {
-//     offset: undefined
-//   }
-// });
+const socket = io('http://localhost:3001', {
+  auth: {
+    offset: undefined,
+    sessionId: localStorage.getItem("sessionId") || undefined,
+  }
+});
 
 // Handle successful connection
 socket.on("message", (messageData) => {
   console.log('MessageData from client', messageData);
-  let [ msg, timestamp ] = messageData;
+  let [msg, timestamp] = messageData;
 
   socket.auth.offset = timestamp; // atLeastOnce logic
   console.log('Socket offset', socket.auth.offset)
-  
+
   const item = document.createElement('li');
   item.textContent = msg["hi"];
   messages.appendChild(item);
