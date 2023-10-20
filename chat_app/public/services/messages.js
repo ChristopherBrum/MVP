@@ -1,12 +1,38 @@
+////////// Connecto to EC2 instance //////////
 // Connect to the Socket.IO server
-const socket = io('http://localhost:3001');
-
-// -----  atLeastOnce logic
-// const socket = io('http://localhost:3001', { 
+// const socket = io('44.212.23.240:3001', { 
 //   auth: {
 //     offset: undefined
 //   }
 // });
+
+// // Handle successful connection
+// socket.on("message", (messageData) => {
+//   console.log('MessageData from client', messageData);
+//   // msg is the object
+//   let [ msg, timestamp ] = messageData;
+
+//   console.log("msg:", msg)
+
+//   socket.auth.offset = timestamp; // atLeastOnce logic
+//   console.log('Socket offset', socket.auth.offset)
+
+//   const messages = document.getElementById('messages');
+//   const item = document.createElement('li');
+//   // reference 'hi' in the object
+//   item.textContent = msg["hi"];
+//   messages.appendChild(item);
+//   window.scrollTo(0, document.body.scrollHeight);
+// });
+
+////////// Connecto to EC2 instance end //////////
+
+// Connect to the Socket.IO server
+const socket = io('http://localhost:3001', { 
+  auth: {
+    offset: undefined
+  }
+});
 
 // Handle successful connection
 socket.on("message", (messageData) => {
@@ -16,6 +42,7 @@ socket.on("message", (messageData) => {
   socket.auth.offset = timestamp; // atLeastOnce logic
   console.log('Socket offset', socket.auth.offset)
   
+  const messages = document.getElementById('messages');
   const item = document.createElement('li');
   item.textContent = msg["hi"];
   messages.appendChild(item);
@@ -74,7 +101,10 @@ const disconnectBtn = document.getElementById('disconnect');
 disconnectBtn.addEventListener('click', (e) => {
   e.preventDefault();
   socket.disconnect();
-  console.log('client-side offset upon disconnect', socket.auth.offset)
+  if (socket.auth.offset) {
+    console.log('client-side offset upon disconnect', socket.auth.offset)
+
+  }
   setTimeout(() => {
     socket.connect();
   }, 7000)
@@ -87,3 +117,15 @@ disconnectBtn.addEventListener('click', (e) => {
 //   }
 //   // else the socket will automatically try to reconnect
 // });
+
+// fires event when a room is selected from the dropdown
+
+document.addEventListener('DOMContentLoaded', () => {
+  const options = document.getElementById('options');
+
+  options.addEventListener('change', () => {
+      const selectedOption = options.value;
+
+      alert(`You're now in room: ${selectedOption}`);
+  });
+});
