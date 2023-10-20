@@ -20,8 +20,6 @@ interface IMgRequest extends Document<any> {
   },
 }
 
-let reconnect: boolean = false;
-
 let currentSessions: SessionObject[] = []
 
 const fetchMissedMessages = async (offset: Date) => {
@@ -30,21 +28,28 @@ const fetchMissedMessages = async (offset: Date) => {
   return messageArr;
 }
 
+const isReconnect = (socket: Socket) => {
+  const currentSessionID = socket.handshake.auth.sessionId
+  return currentSessions.find(obj => obj.sessionId === currentSessionID);
+}
 
 export const sessionIdMiddleware = (socket: Socket, next: NextFunction) => {
-  const currentSessionID = socket.handshake.auth.sessionId
-  console.log("Middleware executed");
-  console.log(currentSessionID);
-  console.log(currentSessions);
+  const session = isReconnect(socket);
 
-  if (currentSessionID) {
-    const session = currentSessions.find(obj => obj.sessionId === currentSessionID);
-    if (session) {
-      socket.data.sessionId = session.sessionId;
-      reconnect = true;
-      return next();
-    }
+  // console.log('\n')
+  // console.log('######## NEW TEST ##########')
+  // console.log("Middleware executed");
+  // // console.log("currentSessionID:", currentSessionID);
+  // console.log("currentSessionId:", socket.handshake.auth.sessionId);
+  // console.log(currentSessions);
+  // console.log('\n');
+
+
+  if (session) {
+    socket.data.sessionId = session.sessionId;
+    return next();
   }
+
   let randomID = uuid4();
 
   socket.data.sessionId = randomID;
@@ -65,7 +70,8 @@ export const handleConnection = async (socket: Socket) => {
     socket.emit('roomJoined', `You have joined room: ${roomName}`);
   });
 
-  if (reconnect) {
+  if (isReconnect(socket)) {
+
     console.log('A user re-connected');
 
     socket.join("room 1");
@@ -102,11 +108,3 @@ export const handleConnection = async (socket: Socket) => {
 // });
 
 /// atLeastOnce server-side END ////////
-
-// const fetchLastFive = async (socket: Socket) => {
-//   let messageArr = await fetchMessages();
-//   messageArr.forEach(message => {
-//     let msg = message.room.roomData
-//     socket.emit("connect_message", msg);
-//   });
-// }
