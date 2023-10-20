@@ -4,3 +4,4 @@ chat_app/package-lock.json
 ws_server/node_modules
 ws_server/.env
 ws_server/package-lock.json
+ws_server/dist

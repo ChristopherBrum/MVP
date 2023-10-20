@@ -1,43 +1,12 @@
 ////////// Connecto to EC2 instance //////////
 // Connect to the Socket.IO server
-// const socket = io('http://localhost:3001');
-
 // const socket = io('44.212.23.240:3001');
 
 // -----  atLeastOnce logic
 const socket = io('http://localhost:3001', {
   auth: {
-    offset: undefined,
     sessionId: localStorage.getItem("sessionId") || undefined,
-  }
-});
-
-
-// // Handle successful connection
-// socket.on("message", (messageData) => {
-//   console.log('MessageData from client', messageData);
-//   // msg is the object
-//   let [ msg, timestamp ] = messageData;
-
-//   console.log("msg:", msg)
-
-//   socket.auth.offset = timestamp; // atLeastOnce logic
-//   console.log('Socket offset', socket.auth.offset)
-
-//   const messages = document.getElementById('messages');
-//   const item = document.createElement('li');
-//   // reference 'hi' in the object
-//   item.textContent = msg["hi"];
-//   messages.appendChild(item);
-//   window.scrollTo(0, document.body.scrollHeight);
-// });
-
-////////// Connecto to EC2 instance end //////////
-
-// Connect to the Socket.IO server
-const socket = io('http://localhost:3001', { 
-  auth: {
-    offset: undefined
+    offset: localStorage.getItem("offset") || undefined,
   }
 });
 
@@ -47,16 +16,10 @@ socket.on("message", (messageData) => {
   let [msg, timestamp] = messageData;
 
   socket.auth.offset = timestamp; // atLeastOnce logic
+  localStorage.setItem("offset", timestamp);
   console.log('Socket offset', socket.auth.offset)
-  const messages = document.getElementById('messages');
-  const item = document.createElement('li');
-  item.textContent = msg["message"];
-  messages.appendChild(item);
-  window.scrollTo(0, document.body.scrollHeight);
-});
 
-socket.on("connect_message", (msg) => {
-  socket.auth.offset = timestamp; // w/o this update, user may always receive messages from a specific point in time on
+  const messages = document.getElementById('messages');
   const item = document.createElement('li');
   item.textContent = msg["message"];
   messages.appendChild(item);
@@ -69,21 +32,12 @@ socket.on("session", ({ sessionId }) => {
   localStorage.setItem("sessionId", sessionId);
 })
 
-
-// // const form = document.getElementById('form');
-// // const input = document.getElementById('input');
-// const messages = document.getElementById('messages');
-
-// // we don't need this if we are only concerned about the client receiving what is published by backend services
-// the client does not need to send data
-
 const disconnectBtn = document.getElementById('disconnect');
 disconnectBtn.addEventListener('click', (e) => {
   e.preventDefault();
   socket.disconnect();
   if (socket.auth.offset) {
     console.log('client-side offset upon disconnect', socket.auth.offset)
-
   }
   setTimeout(() => {
     socket.connect();
@@ -112,7 +66,6 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 });
 
-// catches roomJoined event
 socket.on('roomJoined', (message) => {
   console.log(message);
 });

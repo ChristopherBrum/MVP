@@ -31,10 +31,10 @@ const createMessage = async (room_id: string, message: string) => {
   try {
     const response = await docClient.send(command);
 
-		console.log('');
-    console.log('pushToDynamo -----------------------------------------------');
-    console.log("response httpStatusCode:", response['$metadata']['httpStatusCode']);
-    console.log('');
+		// console.log('');
+    // console.log('pushToDynamo -----------------------------------------------');
+    // console.log("response httpStatusCode:", response['$metadata']['httpStatusCode']);
+    // console.log('');
 
     return response;
   } catch (error) {
@@ -57,7 +57,7 @@ const readPreviousMessages = async (room_id: string, messagesToFetch: number) =>
 		});
 
     const response = await client.send(command);
-		console.log("readPreviousMessage invoked:", response.Items);
+		// console.log("readPreviousMessage invoked:", response.Items);
     return response;
   } catch (error) {
     console.error(error);
@@ -74,14 +74,14 @@ const readMessage = async () => {
       TableName: "Messages"
     });
     const response = await client.send(command);
-		console.log("readMessage", response.Item);
+		// console.log("readMessage", response.Item);
     return response;
   } catch (error) {
     console.error(error);
   }
 };
 
-readPreviousMessages('G', 5);
+// readPreviousMessages('G', 5);
 
 export default {
 	createMessage,

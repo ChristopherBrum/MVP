@@ -16,14 +16,15 @@ interface RoomData {
 interface IMgRequest extends Document<any> {
   room: {
     roomName: string,
-    roomData: RoomData
+    roomData: RoomData,
   },
+  createdAt: Date,
+  updatedAt: Date
 }
 
 let currentSessions: SessionObject[] = []
 
 const fetchMissedMessages = async (offset: Date) => {
-  console.log('#fetchMissedMessages Offset passed', offset)
   let messageArr: IMgRequest[] = await MgRequest.find({ createdAt: { $gt: offset } });
   return messageArr;
 }
@@ -39,7 +40,6 @@ export const sessionIdMiddleware = (socket: Socket, next: NextFunction) => {
   // console.log('\n')
   // console.log('######## NEW TEST ##########')
   // console.log("Middleware executed");
-  // // console.log("currentSessionID:", currentSessionID);
   // console.log("currentSessionId:", socket.handshake.auth.sessionId);
   // console.log(currentSessions);
   // console.log('\n');
@@ -76,17 +76,24 @@ export const handleConnection = async (socket: Socket) => {
 
     socket.join("room 1");
 
+    console.log('###### NEW TEST #######');
+    console.log('Session Obj', isReconnect(socket));
+    console.log('Offset Value', socket.handshake.auth.offset); // the timestamp of the last message saved to the database
+    console.log('\n')
+
     let messageArr = await fetchMissedMessages(socket.handshake.auth.offset)
 
     messageArr.forEach(message => {
       let msg = message.room.roomData
-      socket.emit("connect_message", msg);
+      let timestamp = message.createdAt
+      console.log([msg, timestamp]);
+      socket.emit("message", [msg, timestamp]);
     });
 
   } else {
     console.log('A user connected first time');
     socket.join("room 1");
-    socket.handshake.auth.offset = undefined
+
     socket.emit("session", {
       sessionId: socket.data.sessionId,
     })
