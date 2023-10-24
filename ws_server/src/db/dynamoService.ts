@@ -4,7 +4,6 @@ import {
 	ScanCommand
 } from "@aws-sdk/client-dynamodb";
 import { 
-	GetCommand,
 	PutCommand, 
 	DynamoDBDocumentClient 
 } from "@aws-sdk/lib-dynamodb";
@@ -22,20 +21,18 @@ const createMessage = async (room_id: string, message: string) => {
     Item: {
       id: room_id,
 			time_created,
-      payload: {
-				message,
-			} 
+      payload: message
     },
   });
 
   try {
     const response = await docClient.send(command);
 
-		console.log('');
-    console.log('pushToDynamo -----------------------------------------------');
-    console.log("response:", response);
-    console.log("response $metadata:", response['$metadata']);
-    console.log('');
+		// console.log('');
+    // console.log('pushToDynamo -----------------------------------------------');
+    // console.log("response:", response);
+    // console.log("response $metadata:", response['$metadata']);
+    // console.log('');
 
     return {
       status_code: response['$metadata']['httpStatusCode'],
@@ -45,7 +42,6 @@ const createMessage = async (room_id: string, message: string) => {
         message
       } 
     }
-    // return response;
   } catch (error) {
     console.log(error);
   }
@@ -71,21 +67,12 @@ const readPreviousMessagesByRoom = async (room_id: string, last_timestamp: numbe
       unmarshall(item)
     );
 
-    // console.log("readPreviousMessage invoked:", response.Items);
     return unmarshalledItems;
   } catch (error) {
     console.error(error);
     return error;
   }
 };
-
-// createMessage("A", "I love Kimchi!!")
-// createMessage("B", "Goldfish are delicious!")
-// createMessage("C", "Oh my gorsh!")
-// createMessage("D", "Beemo is cutie!")
-// createMessage("A", "B for banana!")
-
-// readPreviousMessagesByRoom('A', 1698105371700)
 
 export default {
 	createMessage,

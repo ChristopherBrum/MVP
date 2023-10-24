@@ -78,17 +78,6 @@ export const mongoPostmanRoomsRoute = async (req: Request, res: Response) => {
   res.send('ok');
 }
 
-// type DynamoResponse = {
-//   $metadata: {
-//     httpStatusCode: number,
-//     requestId: string,
-//     extendedRequestId: undefined,
-//     cfId: undefined,
-//     attempts: number,
-//     totalRetryDelay: number
-//   }
-// }
-
 type DynamoCreateResponse = {
   status_code: number | undefined,
   room_id: string,
@@ -99,12 +88,16 @@ type DynamoCreateResponse = {
 export const dynamoPostmanRoute = async (req: Request, res: Response) => {
   try {
     const data = req.body;
-    // const dynamoResponse = await dynamoService.createMessage(data.room_id, data.payload);
-    const dynamoResponse = await dynamoService.createMessage(data.room_id, data.payload) as DynamoCreateResponse;
+    const dynamoResponse = await dynamoService.createMessage(
+      data.room_id, 
+      data.payload
+    ) as DynamoCreateResponse;
+
     let messageData = [data.payload, dynamoResponse.time_created];
 
-    console.log("data:", data);
-    console.log('SENT POSTMAN MESSAGE:', data.payload);
+    // console.log("data:", data);
+    // console.log('SENT POSTMAN MESSAGE:', data.payload);
+    
     io.to("room 1").emit("message", messageData);
     
     if (dynamoResponse.status_code) {
