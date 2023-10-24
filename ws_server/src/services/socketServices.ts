@@ -44,7 +44,6 @@ export const sessionIdMiddleware = (socket: Socket, next: NextFunction) => {
   // console.log(currentSessions);
   // console.log('\n');
 
-
   if (session) {
     socket.data.sessionId = session.sessionId;
     return next();
