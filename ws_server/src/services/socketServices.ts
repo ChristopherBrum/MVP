@@ -2,6 +2,7 @@ import { v4 as uuid4 } from 'uuid';
 import { Socket } from "socket.io";
 import { NextFunction } from 'express';
 import { Date, Document } from 'mongoose';
+import dynamoService from '../db/dynamoService';
 
 const MgRequest = require('../db/mongoService');
 
@@ -74,18 +75,30 @@ export const handleConnection = async (socket: Socket) => {
     console.log('A user re-connected');
 
     socket.join("room 1");
+    // socket.join("room 2");
 
     console.log('###### NEW TEST #######');
     console.log('Session Obj', isReconnect(socket));
     console.log('Offset Value', socket.handshake.auth.offset); // the timestamp of the last message saved to the database
+    // console.log('socket obj arr', [...socket.rooms]);
     console.log('\n')
 
-    let messageArr = await fetchMissedMessages(socket.handshake.auth.offset)
+    // let [ _, ...rooms ] = [...socket.rooms];
+
+    // let messageArr = await fetchMissedMessages(socket.handshake.auth.offset) // old 
+    // const timestamp = socket.handshake.auth.offset.getTime();
+
+    interface DynamoMessage {
+      id: object;
+      time_created: object;
+      payload: object;
+    }
+
+    let messageArr = await dynamoService.readPreviousMessagesByRoom('A', 1698105371752) as DynamoMessage[];
 
     messageArr.forEach(message => {
-      let msg = message.room.roomData
-      let timestamp = message.createdAt
-      console.log([msg, timestamp]);
+      let msg = message.payload
+      let timestamp = message.time_created
       socket.emit("message", [msg, timestamp]);
     });
 

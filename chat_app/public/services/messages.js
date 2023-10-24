@@ -13,7 +13,7 @@ const socket = io('http://localhost:3001', {
 // Handle successful connection
 socket.on("message", (messageData) => {
   console.log('MessageData from client', messageData);
-  let [msg, timestamp] = messageData;
+  let [payload, timestamp] = messageData;
 
   socket.auth.offset = timestamp; // atLeastOnce logic
   localStorage.setItem("offset", timestamp);
@@ -21,7 +21,7 @@ socket.on("message", (messageData) => {
 
   const messages = document.getElementById('messages');
   const item = document.createElement('li');
-  item.textContent = msg["message"];
+  item.textContent = payload["message"];
   messages.appendChild(item);
   window.scrollTo(0, document.body.scrollHeight);
 });

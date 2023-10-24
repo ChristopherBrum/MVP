@@ -9,17 +9,19 @@ import {
 	DynamoDBDocumentClient 
 } from "@aws-sdk/lib-dynamodb";
 import { fromEnv } from "@aws-sdk/credential-providers";
+const { unmarshall } = require("@aws-sdk/util-dynamodb");
 
 const clientConfig: DynamoDBClientConfig = { credentials: fromEnv() };
 const client = new DynamoDBClient(clientConfig);
 const docClient = DynamoDBDocumentClient.from(client);
 
 const createMessage = async (room_id: string, message: string) => {
+  const time_created = Date.now();
   const command = new PutCommand({
     TableName: "rooms",
     Item: {
       id: room_id,
-			time_created: Date.now(),
+			time_created,
       payload: {
 				message,
 			} 
@@ -35,7 +37,15 @@ const createMessage = async (room_id: string, message: string) => {
     console.log("response $metadata:", response['$metadata']);
     console.log('');
 
-    return response;
+    return {
+      status_code: response['$metadata']['httpStatusCode'],
+      room_id,
+      time_created,
+      payload: {
+        message
+      } 
+    }
+    // return response;
   } catch (error) {
     console.log(error);
   }
@@ -55,10 +65,14 @@ const readPreviousMessagesByRoom = async (room_id: string, last_timestamp: numbe
         ':last_timestamp': { N: last_timestamp.toString() }
       }
     });
-    
+
     const response = await client.send(command);
-    console.log("readPreviousMessage invoked:", response.Items);
-    return response;
+    const unmarshalledItems = (response.Items || []).map((item) =>
+      unmarshall(item)
+    );
+
+    // console.log("readPreviousMessage invoked:", response.Items);
+    return unmarshalledItems;
   } catch (error) {
     console.error(error);
     return error;
