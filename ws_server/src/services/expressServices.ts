@@ -81,9 +81,9 @@ export const mongoPostmanRoomsRoute = async (req: Request, res: Response) => {
 export const dynamoPostmanRoute = async (req: Request, res: Response) => {
   try {
     const data: any = req.body;  // specify the actual type
-    const dynamoResponse: any = await dynamoService.createMessage(data.RoomId, data.Message) // specify the actual type
-    console.log('SENT POSTMAN MESSAGE:', data.Message);
-    io.to("room 1").emit("message", data.Message);
+    const dynamoResponse: any = await dynamoService.createMessage(data.room_id, data.payload) // specify the actual type
+    console.log('SENT POSTMAN MESSAGE:', data.payload);
+    io.to("room 1").emit("message", data.payload);
     res.status(dynamoResponse['$metadata']['httpStatusCode']).send('ok');
   } catch (error) {
     console.log(error);
