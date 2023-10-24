@@ -1,9 +1,18 @@
 import { Request, Response } from "express";
-import { io } from '../index';
-const { connect } = require("mongoose");
-const MgRequest = require('../db/mongoService');
-import dynamoService from "../db/dynamoService";
+import { io } from '../index.js';
+import pkg from "mongoose";
+const { connect } = pkg;
+import { MgRequest } from '../db/mongoService.js';
+import dynamoService from "../db/dynamoService.js";
 import { Date } from 'mongoose';
+
+declare global {
+  namespace NodeJS {
+    interface ProcessEnv {
+      ENV_DB: string;
+    }
+  }
+}
 
 // code from Mongoose Typescript Support
 run().catch(err => console.log(err));
@@ -53,11 +62,11 @@ export const mongoPostmanRoomsRoute = async (req: Request, res: Response) => {
     room: string;
     message: string;
   }
-  
+
   const data: jsonData = req.body
 
   console.log('ROOM AND MESSAGE:', data.room, data.message);
-  
+
   const currentRequest = new MgRequest({
     room: {
       roomName: data.room,
