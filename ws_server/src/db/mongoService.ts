@@ -1,8 +1,10 @@
 // const mongoose = require('mongoose');
-import { Document, Schema, model } from 'mongoose';
+import { Date, Document } from "mongoose";
+import pkg from "mongoose";
+const { Schema, model } = pkg;
 
 interface RoomData {
-  hi: string;
+  message: string;
 }
 
 interface IMgRequest extends Document<any> {
@@ -10,6 +12,8 @@ interface IMgRequest extends Document<any> {
     roomName: string,
     roomData: RoomData
   },
+  createdAt: Date,
+  updatedAt: Date
 }
 
 // const requestSchema = new Schema<IMgRequest>({
@@ -25,7 +29,8 @@ const requestSchema = new Schema<IMgRequest>({
   room: {
     type: Object,
     required: true,
-  }},
+  }
+},
   { timestamps: true }, // creates timestamp
 )
 
@@ -37,6 +42,5 @@ requestSchema.set('toJSON', {
   }
 })
 
-const MgRequest = model<IMgRequest>('MgRequest', requestSchema);
+export const MgRequest = model<IMgRequest>('MgRequest', requestSchema);
 
-module.exports = MgRequest
