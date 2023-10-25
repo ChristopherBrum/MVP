@@ -1,16 +1,14 @@
 import { createServer } from "http";
 import { Server } from "socket.io";
 import { Date } from 'mongoose';
-
-const express = require('express');
+import express from 'express';
+import cors from 'cors';
+import "dotenv/config"
 const app = express();
-const cors = require('cors');
 const httpServer = createServer(app);
 
-require("dotenv").config();
-
-const { sessionIdMiddleware, handleConnection } = require('./services/socketServices')
-const { homeRoute, mongoPostmanRoute, mongoPostmanRoomsRoute, dynamoPostmanRoute } = require('./services/expressServices')
+import { sessionIdMiddleware, handleConnection } from './services/socketServices.js';
+import { homeRoute, mongoPostmanRoute, mongoPostmanRoomsRoute, dynamoPostmanRoute } from './services/expressServices.js';
 
 // Express Middleware
 
@@ -73,8 +71,8 @@ export const io = new Server<
 
 // WS Server Logic
 
-io.use(sessionIdMiddleware)
-io.on("connection", handleConnection)
+io.use(sessionIdMiddleware);
+io.on("connection", handleConnection);
 
 // Backend API
 

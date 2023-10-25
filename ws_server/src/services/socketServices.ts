@@ -1,10 +1,9 @@
 import { v4 as uuid4 } from 'uuid';
 import { Socket } from "socket.io";
-import { NextFunction } from 'express';
 import { Date, Document } from 'mongoose';
 import dynamoService from '../db/dynamoService';
 
-const MgRequest = require('../db/mongoService');
+import { MgRequest } from '../db/mongoService.js';
 
 interface SessionObject {
   sessionId: string;
@@ -23,6 +22,7 @@ interface IMgRequest extends Document<any> {
   updatedAt: Date
 }
 
+//
 let currentSessions: SessionObject[] = []
 
 const isReconnect = (socket: Socket) => {
@@ -30,7 +30,7 @@ const isReconnect = (socket: Socket) => {
   return currentSessions.find(obj => obj.sessionId === currentSessionID);
 }
 
-export const sessionIdMiddleware = (socket: Socket, next: NextFunction) => {
+export const sessionIdMiddleware = (socket: Socket, next: () => void) => {
   const session = isReconnect(socket);
 
   // console.log('\n')
