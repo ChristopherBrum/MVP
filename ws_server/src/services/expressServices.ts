@@ -87,27 +87,34 @@ export const mongoPostmanRoomsRoute = async (req: Request, res: Response) => {
   res.send('ok');
 }
 
+type DynamoCreateResponse = {
+  status_code: number | undefined,
+  room_id: string,
+  time_created: number,
+  payload: object
+}
+
 export const dynamoPostmanRoute = async (req: Request, res: Response) => {
   try {
-    const data: any = req.body;  // specify the actual type
-    const dynamoResponse: any = await dynamoService.createMessage(data.RoomId, data.Message) // specify the actual type
-    console.log('SENT POSTMAN MESSAGE:', data.Message);
-    io.to("room 1").emit("message", data.Message);
-    res.status(dynamoResponse['$metadata']['httpStatusCode']).send('ok');
+    const data = req.body;
+    const dynamoResponse = await dynamoService.createMessage(
+      data.room_id, 
+      data.payload
+    ) as DynamoCreateResponse;
+
+    let messageData = [data.payload, dynamoResponse.time_created];
+
+    // console.log("data:", data);
+    // console.log('SENT POSTMAN MESSAGE:', data.payload);
+    
+    io.to("room 1").emit("message", messageData);
+    
+    if (dynamoResponse.status_code) {
+      res.status(dynamoResponse.status_code).send('ok');
+    } else {
+      res.status(404).send('bad request');
+    }
   } catch (error) {
     console.log(error);
   }
 }
-
-// need create an interface for the request body
-// app.post('/api/postman/dynamo', async (req: Request, res: Response) => {
-//   try {
-//     const data: any = req.body;  // specify the actual type
-//     const dynamoResponse: any = await dynamoService.createMessage(data.RoomId, data.Message) // specify the actual type
-//     console.log('SENT POSTMAN MESSAGE:', data.Message);
-//     io.to("room 1").emit("message", data.Message);
-//     res.status(dynamoResponse['$metadata']['httpStatusCode']).send('ok');
-//   } catch (error) {
-//     console.log(error);
-//   }
-// });

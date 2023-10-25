@@ -2,26 +2,24 @@
 // Connect to the Socket.IO server
 // const socket = io('44.212.23.240:3001');
 
-// -----  atLeastOnce logic
 const socket = io('http://localhost:3001', {
   auth: {
     sessionId: localStorage.getItem("sessionId") || undefined,
-    offset: localStorage.getItem("offset") || undefined,
+    offset: localStorage.getItem("offset") || Date.now(),
   }
 });
 
 // Handle successful connection
 socket.on("message", (messageData) => {
   console.log('MessageData from client', messageData);
-  let [msg, timestamp] = messageData;
+  let [ payload, timestamp ] = messageData;
 
   socket.auth.offset = timestamp; // atLeastOnce logic
   localStorage.setItem("offset", timestamp);
-  console.log('Socket offset', socket.auth.offset)
 
   const messages = document.getElementById('messages');
   const item = document.createElement('li');
-  item.textContent = msg["message"];
+  item.textContent = payload["message"];
   messages.appendChild(item);
   window.scrollTo(0, document.body.scrollHeight);
 });
@@ -41,7 +39,7 @@ disconnectBtn.addEventListener('click', (e) => {
   }
   setTimeout(() => {
     socket.connect();
-  }, 7000)
+  }, 10000)
 });
 
 // socket.on("disconnect", (reason) => {
