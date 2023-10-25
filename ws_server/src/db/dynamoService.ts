@@ -9,13 +9,14 @@ import {
 } from "@aws-sdk/lib-dynamodb";
 import { fromEnv } from "@aws-sdk/credential-providers";
 import { unmarshall } from "@aws-sdk/util-dynamodb";
+import { getCurrentTimeStamp } from "src/utils/helpers.js";
 
 const clientConfig: DynamoDBClientConfig = { credentials: fromEnv() };
 const client = new DynamoDBClient(clientConfig);
 const docClient = DynamoDBDocumentClient.from(client);
 
-const createMessage = async (room_id: string, message: string) => {
-  const time_created = Date.now();
+export const createMessage = async (room_id: string, message: string) => {
+  const time_created = getCurrentTimeStamp();
   const command = new PutCommand({
     TableName: "rooms",
     Item: {
@@ -47,7 +48,7 @@ const createMessage = async (room_id: string, message: string) => {
   }
 };
 
-const readPreviousMessagesByRoom = async (room_id: string, last_timestamp: number) => {
+export const readPreviousMessagesByRoom = async (room_id: string, last_timestamp: number) => {
   try {
     const command = new ScanCommand({ 
       TableName: "rooms",
@@ -73,8 +74,3 @@ const readPreviousMessagesByRoom = async (room_id: string, last_timestamp: numbe
     return error;
   }
 };
-
-export default {
-	createMessage,
-	readPreviousMessagesByRoom
-}

@@ -1,6 +1,6 @@
 import { Request, Response } from "express";
 import { io } from '../index.js';
-import dynamoService from "../db/dynamoService.js";
+import { createMessage } from "src/db/dynamoService.js";
 import { storeMessageInSet } from '../db/redisService.js';
 
 export const homeRoute = (req: Request, res: Response) => {
@@ -40,7 +40,7 @@ type DynamoCreateResponse = {
 export const dynamoPostmanRoute = async (req: Request, res: Response) => {
   try {
     const data = req.body;
-    const dynamoResponse = await dynamoService.createMessage(
+    const dynamoResponse = await createMessage(
       data.room_id, 
       data.payload
     ) as DynamoCreateResponse;

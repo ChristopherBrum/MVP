@@ -1,7 +1,7 @@
 import { v4 as uuid4 } from 'uuid';
 import { Socket } from "socket.io";
-import { createSessionHash, retrieveMsgsByRoomAndTime } from '../db/redisService.js';
-import dynamoService from '../db/dynamoService.js';
+import { createSessionHash, retrieveMsgsByRoomAndTime, checkSessionTime } from '../db/redisService.js';
+import { createMessage, readPreviousMessagesByRoom } from 'src/db/dynamoService.js'; 
 
 // this is just to make sessionId a property of a socket object
 // the purpose is so that sessionId accessible within all the socket listeners
@@ -16,13 +16,50 @@ interface DynamoMessage {
 }
 
 const dynamoFunc = async (socket: Socket) => {
-  let messageArr = await dynamoService.readPreviousMessagesByRoom('C', socket.handshake.auth.offset) as DynamoMessage[];
+  let messageArr = await readPreviousMessagesByRoom('C', socket.handshake.auth.offset) as DynamoMessage[];
       
   messageArr.forEach(message => {
     let msg = message.payload
     let timestamp = message.time_created
     socket.emit("message", [msg, timestamp]);
   });
+}
+
+/*
+when a client reconnects, we check the rooms they were subscribed to
+then we automatically (no user action needed) emit the missing messages from those rooms
+to the client directly (not to the overall room)
+(how the devs display those messages in the UI is not our concern)
+*/
+
+// sessionId key should be in Redis for 24hrs
+// check the Redis timestamp for that sessionId
+// compare that to the current time
+// if the difference is greater than 2 minutes
+  // messages should not have expired from cache
+  // set property on socket object of reconnection type = short
+// else
+  // messages should be expired/gone from cache
+  // set property on socket object of reconnection type = long
+const checkReconnectionType = (sessionId: string) => {
+  const lastSessionTimestamp = checkSessionTime(sessionId);
+  if (lastSessionTimestamp > '2 Minutes!') {
+    return 'dynamo';
+  } else {
+    return 'redis';
+  }
+}
+
+const emitReconnectionStateRecovery = (socket: CustomSocket, reconnectionType: string, sessionId: string) => {
+  if (reconnectionType === 'redis') {
+    console.log('#### Redis Reconnection')
+    retrieveMsgsByRoomAndTime('B', sessionId);
+  } else if (reconnectionType === 'dynamo') {
+    console.log('#### Dynamo Reconnection')
+    dynamoFunc(socket)
+  } else {
+    console.log('#### Not Dynamo or Redis ??')
+  }
 }
 
 // called when io.on(connect)
@@ -33,12 +70,11 @@ export const handleConnection = async (socket: CustomSocket) => {
   socket.on('sessionId', (localStorageSessionId) => {
     // if it is truthy, this is a reconnection
     // (if twineSessionId is in their local storage, it should also be in Redis)
-    if (localStorageSessionId) {
+    if (localStorageSessionId) { 
       console.log('#### Reconnection');
       socket.sessionId = localStorageSessionId;
-      // logs to ws_server console; sessionId is used as a key to get the associated Redis timestamp
-      retrieveMsgsByRoomAndTime('B', localStorageSessionId);
-      dynamoFunc(socket)
+      const reconnectionType: string = checkReconnectionType(localStorageSessionId);
+      emitReconnectionStateRecovery(socket, reconnectionType, localStorageSessionId);
     } else {
       // create uuid; save it in Redis; send it to client to store in their local storage
       console.log('#### First Connection');
