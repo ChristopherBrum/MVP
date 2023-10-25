@@ -1,5 +1,36 @@
 import { Redis } from "ioredis"
+import { getCurrentTimeStamp } from "src/utils/helpers.js";
 import "dotenv/config"
+
+/*
+'sessionIdString': 'timeStampString'
+
+'sessionIdString' = {
+  timestamp,
+  room1,
+  room2,
+}
+
+sessionIdString.room3 = undefined
+sessionIdString.room2 = true
+sessionIdString.timestamp = UTC time
+
+if (reconnection) {
+  checkLongOrShort(sessionId) {
+    sessionIdString.timestamp - Date.now()
+    if () {
+      redis logic for state recovery
+    } else {
+      dynamo logic for state recovery
+    }
+  }
+}
+
+within 24hrs, ping Redis for sessionId
+after 24hrs, ping Dynamo for sessionId
+
+
+*/
 
 const redisURL = process.env.CACHE_ENDPOINT || 'redis://localhost:6379';
 const redis: Redis = new Redis(redisURL);
@@ -24,17 +55,12 @@ export const createRoomHash = async (rooms: string[]) => {
   }
 }
 
-export const getcurrentTimeStamp = () => {
-  const currentDate = new Date();
-  const timestampInSeconds = Math.floor(currentDate.getTime() / 1000);
-  return timestampInSeconds;
-}
 
 // room and payload must be extracted from the Postman request body then passed to this func as args
 // the name of the room sent in the Postman request body must match a room key in Redis
 // note: we should return 'room name < name >' does not exist error for Postman API
 export const storeMessageInSet = async (room: string, payload: string) => {
-  let timeCreated = getcurrentTimeStamp();
+  let timeCreated = getCurrentTimeStamp();
   await redis.zadd(`${room}Set`, timeCreated, payload);
 }
 
@@ -63,13 +89,12 @@ export const retrieveMsgsByRoomAndTime = async (room: string, sessionID: string)
 // OR timestamp is specific to each room -- suboptimal; more complicated logic and more data to store
 export const createSessionHash = async (sessionID: string) => {
   console.log('createSessionHash sessionID: ' + sessionID);
-  const timestampInSeconds = getcurrentTimeStamp();
+  const timestampInSeconds = getCurrentTimeStamp();
   redis.set(sessionID, timestampInSeconds);
   let zz = await redis.get(sessionID);
 }
 
-// we're not using this at the moment in socketServices, maybe delete?
-// export const searchRedisSessions = async (sessionID: string) => {
-//   let zz = await redis.get(sessionID);
-//   return zz;
-// }
+export const checkSessionTime = async (sessionID: string) => {
+  let zz = await redis.get(sessionID);
+  return zz;
+}

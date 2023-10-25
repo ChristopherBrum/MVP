@@ -75,3 +75,42 @@ document.addEventListener('DOMContentLoaded', () => {
 socket.on('roomJoined', (message) => {
   console.log(message);
 });
+
+/*
+------ atLeastOnceFunctionality
+Need to track a users subscribed rooms to provide state recovery upon disconnect (both intentionally & unintentionally)
+
+Updated state recovery approach: 
+- Track timestamp of each room's last message
+- Capture user's disconnect time
+- Retrive messages from Redis/Dynamo based off difference
+
+
+Store rooms, where? Redis sessions table
+
+
+Upon connection, check Redis, 
+- does user exist? 
+  - no? initial connection
+  - yes? how long have they been disconnected?
+    - under 2min?
+      - query Redis
+    - otherwise
+      - query Dynamo
+
+
+When a user connects reconnects
+- access localStorage to retreive rooms user is subscribed to
+  - iterate thru rooms, for each room call #readPreviousMessages(room), an async Fn that will call
+    - #readPreviousMessagesByRoom for each room, passing in the offset value from localStorage
+      - the returned array of messages for the current room will be emitted using the #forEach method on lines 85-89
+
+
+TODO ITEMS
+- implement a function for both Redis & DynamoDB that captures the time in milliseconds
+
+FURTHER QUESTIONS
+- is the 'roomJoined' socket event handler needed in 'messages.js'?
+- should we provide context (i.e. previous messages) for a user who's connecting for the first time? -> leave the choice up to the developer to implement w/ Twine client?
+
+*/
