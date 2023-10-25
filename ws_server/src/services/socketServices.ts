@@ -1,98 +1,82 @@
 import { v4 as uuid4 } from 'uuid';
 import { Socket } from "socket.io";
-import { Date, Document } from 'mongoose';
-import dynamoService from '../db/dynamoService';
+import { createSessionHash, retrieveMsgsByRoomAndTime } from '../db/redisService.js';
+import dynamoService from '../db/dynamoService.js';
 
-import { MgRequest } from '../db/mongoService.js';
-
-interface SessionObject {
-  sessionId: string;
+// this is just to make sessionId a property of a socket object
+// the purpose is so that sessionId accessible within all the socket listeners
+interface CustomSocket extends Socket {
+  sessionId?: string;
 }
 
-interface RoomData {
-  message: string;
+interface DynamoMessage {
+  id: object;
+  time_created: object;
+  payload: object;
 }
 
-interface IMgRequest extends Document<any> {
-  room: {
-    roomName: string,
-    roomData: RoomData,
-  },
-  createdAt: Date,
-  updatedAt: Date
-}
-
-//
-let currentSessions: SessionObject[] = []
-
-const isReconnect = (socket: Socket) => {
-  const currentSessionID = socket.handshake.auth.sessionId
-  return currentSessions.find(obj => obj.sessionId === currentSessionID);
-}
-
-export const sessionIdMiddleware = (socket: Socket, next: () => void) => {
-  const session = isReconnect(socket);
-
-  // console.log('\n')
-  // console.log('######## NEW TEST ##########')
-  // console.log("Middleware executed");
-  // console.log("currentSessionId:", socket.handshake.auth.sessionId);
-  // console.log(currentSessions);
-  // console.log('\n');
-
-  if (session) {
-    socket.data.sessionId = session.sessionId;
-  } else {
-    let randomID = uuid4();
-    socket.data.sessionId = randomID;
-    currentSessions.push({ sessionId: randomID });
-  }
-
-  next();
+const dynamoFunc = async (socket: Socket) => {
+  let messageArr = await dynamoService.readPreviousMessagesByRoom('C', socket.handshake.auth.offset) as DynamoMessage[];
+      
+  messageArr.forEach(message => {
+    let msg = message.payload
+    let timestamp = message.time_created
+    socket.emit("message", [msg, timestamp]);
+  });
 }
 
 // called when io.on(connect)
-export const handleConnection = async (socket: Socket) => {
+export const handleConnection = async (socket: CustomSocket) => {
+
+  // client emits to this event as soon as they connect
+  // we check if the localStorageSessionId has a value or is undefined
+  socket.on('sessionId', (localStorageSessionId) => {
+    // if it is truthy, this is a reconnection
+    // (if twineSessionId is in their local storage, it should also be in Redis)
+    if (localStorageSessionId) {
+      console.log('#### Reconnection');
+      socket.sessionId = localStorageSessionId;
+      // logs to ws_server console; sessionId is used as a key to get the associated Redis timestamp
+      retrieveMsgsByRoomAndTime('B', localStorageSessionId);
+      dynamoFunc(socket)
+    } else {
+      // create uuid; save it in Redis; send it to client to store in their local storage
+      console.log('#### First Connection');
+      let randomId = uuid4();
+      socket.sessionId = randomId;
+      createSessionHash(randomId);
+      socket.emit("setSessionId", randomId);
+    }
+  })
 
   socket.on('join', (roomName) => {
-    socket.join(roomName); // Join the specified room
-    console.log(`Client has joined room: ${roomName}`);
-
-    // Emit something to the client that just joined the room
+    // subscribes the client to the specified room
+    socket.join(roomName);
+    // emits to the client that they joined the room
     socket.emit('roomJoined', `You have joined room: ${roomName}`);
   });
 
-  if (isReconnect(socket)) {
-    socket.join("room 1");
+  socket.on('disconnecting', () => {
+    console.log('#### Disconnecting');
+    // update the client's sessionId k/v pair in Redis with a new timestamp
+    let sessionId = socket.sessionId || '';
+    createSessionHash(sessionId);
+  })
 
-    // console.log('A user re-connected');
-    // console.log('###### NEW TEST #######');
-    // console.log('Session Obj', isReconnect(socket));
-    // console.log('Offset Value', socket.handshake.auth.offset); // the timestamp of the last message saved to the database
-    // console.log('\n')
-
-    // let [ _, ...rooms ] = [...socket.rooms];
-
-    interface DynamoMessage {
-      id: object;
-      time_created: object;
-      payload: object;
-    }
-
-    let messageArr = await dynamoService.readPreviousMessagesByRoom('C', socket.handshake.auth.offset) as DynamoMessage[];
-
-    messageArr.forEach(message => {
-      let msg = message.payload
-      let timestamp = message.time_created
-      socket.emit("message", [msg, timestamp]);
-    });
-
-  } else {
-    console.log('A user connected first time');
-    socket.join("room 1");
-    socket.emit("session", {
-      sessionId: socket.data.sessionId,
-    })
-  }
+  // default always join this room, for mongoPostmanRoute
+  socket.join("room 1");
 }
 
+// interface DynamoMessage {
+//   id: object;
+//   time_created: object;
+//   payload: object;
+// }
+
+// let messageArr = await dynamoService.readPreviousMessagesByRoom('C', socket.handshake.auth.offset) as DynamoMessage[];
+
+// messageArr.forEach(message => {
+//   let msg = message.payload
+//   let timestamp = message.time_created
+//   socket.emit("message", [msg, timestamp]);
+// });
