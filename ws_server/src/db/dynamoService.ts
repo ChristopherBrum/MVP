@@ -8,7 +8,7 @@ import {
 	DynamoDBDocumentClient 
 } from "@aws-sdk/lib-dynamodb";
 import { fromEnv } from "@aws-sdk/credential-providers";
-const { unmarshall } = require("@aws-sdk/util-dynamodb");
+import { unmarshall } from "@aws-sdk/util-dynamodb";
 
 const clientConfig: DynamoDBClientConfig = { credentials: fromEnv() };
 const client = new DynamoDBClient(clientConfig);

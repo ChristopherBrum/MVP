@@ -4,10 +4,24 @@
 
 const socket = io('http://localhost:3001', {
   auth: {
-    sessionId: localStorage.getItem("sessionId") || undefined,
     offset: localStorage.getItem("offset") || Date.now(),
   }
 });
+
+// when the client connects
+socket.on('connect', () => {
+  // check for sessionId in local storage
+  const sessionId = localStorage.getItem('twineSessionId');
+
+  // send sessionId to server, whether sessionId is undefined or already set
+  socket.emit('sessionId', sessionId);
+});
+
+// if first time connection, set sessionId in local storage
+socket.on('setSessionId', (sessionId) => {
+  console.log('client session event: ' + sessionId);
+  localStorage.setItem('twineSessionId', sessionId);
+})
 
 // Handle successful connection
 socket.on("message", (messageData) => {
@@ -23,12 +37,6 @@ socket.on("message", (messageData) => {
   messages.appendChild(item);
   window.scrollTo(0, document.body.scrollHeight);
 });
-
-// session listener emitted upon user connecting for the first time
-socket.on("session", ({ sessionId }) => {
-  socket.auth = { sessionId };
-  localStorage.setItem("sessionId", sessionId);
-})
 
 const disconnectBtn = document.getElementById('disconnect');
 disconnectBtn.addEventListener('click', (e) => {
