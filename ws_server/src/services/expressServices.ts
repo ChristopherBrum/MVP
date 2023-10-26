@@ -46,7 +46,7 @@ export const dynamoPostmanRoute = async (req: Request, res: Response) => {
     // console.log("data:", data);
     // console.log('SENT POSTMAN MESSAGE:', data.payload);
     
-    io.to("room 1").emit("message", messageData);
+    io.to(data.room_id).emit("message", messageData);
     
     if (dynamoResponse.status_code) {
       res.status(dynamoResponse.status_code).send('ok');

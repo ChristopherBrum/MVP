@@ -75,5 +75,5 @@ app.post('/api/postman/dynamo', dynamoPostmanRoute);
 // listening on port 3001
 
 httpServer.listen(PORT, () => {
-  console.log('listening on port', PORT);
+  console.log('TwineServer listening on port', PORT);
 });
