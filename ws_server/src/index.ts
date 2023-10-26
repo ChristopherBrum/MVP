@@ -7,7 +7,7 @@ const app = express();
 const httpServer = createServer(app);
 
 import { handleConnection } from './services/socketServices.js';
-import { homeRoute, redisPostmanRoomsRoute, dynamoPostmanRoute } from './services/expressServices.js';
+import { homeRoute, publish } from './services/expressServices.js';
 
 // Express Middleware
 
@@ -21,6 +21,10 @@ const PORT = process.env.ENV_PORT || 3001; // this is updated but no ENV_PORT at
 
 // TypeScript types
 
+interface messageObject {
+  message: string;
+}
+
 interface ServerToClientEvents {
   noArg: () => void;
   basicEmit: (a: number, b: string, c: Buffer) => void;
@@ -29,7 +33,7 @@ interface ServerToClientEvents {
 
 interface ClientToServerEvents {
   hello: () => void;
-  message: (message: any[]) => void;
+  message: (message: messageObject) => void;
   roomJoined: (message: string) => void;
   session: (message: SessionObject) => void;
 }
@@ -69,8 +73,9 @@ io.on("connection", handleConnection);
 // Backend API
 
 app.get('/', homeRoute);
-app.put('/api/postman/rooms', redisPostmanRoomsRoute);
-app.post('/api/postman/dynamo', dynamoPostmanRoute);
+app.post('/api/twine', publish);
+// app.put('/api/postman/rooms', redisPostmanRoomsRoute);
+// app.post('/api/postman/dynamo', dynamoPostmanRoute);
 
 // listening on port 3001
 

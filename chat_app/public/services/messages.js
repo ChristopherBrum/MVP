@@ -20,13 +20,11 @@ socket.on('setSessionId', (sessionId) => {
 })
 
 // Handle successful connection
-socket.on("message", (messageData) => {
-  console.log('MessageData from client', messageData);
-  let [payload, timestamp] = messageData;
-
+socket.on("message", (data) => {
+  console.log('data from client', data);
   const messages = document.getElementById('messages');
   const item = document.createElement('li');
-  item.textContent = payload["message"];
+  item.textContent = data["message"];
   messages.appendChild(item);
   window.scrollTo(0, document.body.scrollHeight);
 });
@@ -52,14 +50,6 @@ disconnectBtn.addEventListener('click', (e) => {
   }, 10000)
 });
 
-// socket.on("disconnect", (reason) => {
-//   if (reason === "io server disconnect") {
-//     // the disconnection was initiated by the server, you need to reconnect manually
-//     socket.connect();
-//   }
-//   // else the socket will automatically try to reconnect
-// });
-
 // fires event when a room is selected from the dropdown
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -72,14 +62,4 @@ document.addEventListener('DOMContentLoaded', () => {
     // server then emits back to roomJoined (below)
     socket.emit('join', `${selectedOption}`);
   });
-});
-
-socket.on('roomJoined', (message) => {
-
-  console.log('message to emit: ', message);
-  const messages = document.getElementById('messages');
-  const item = document.createElement('li');
-  item.textContent = message;
-  messages.appendChild(item);
-  window.scrollTo(0, document.body.scrollHeight);
 });

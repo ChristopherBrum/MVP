@@ -51,35 +51,46 @@ const parseMessages = (messagesArr: string[]) => {
   return messagesArr.map(jsonString => {
     let jsonObj = JSON.parse(jsonString);
     return jsonObj["message"];
-  })
+  });
 }
 
 const emitShortTermReconnectionStateRecovery = async (socket: CustomSocket, timestamp: number, rooms: string[]) => {
-  // messagesObj: { roomA:[msg1, msg2,] roomB:[msg1, msg2] }
+  // messagesObj: { "roomA":"[msg1, msg2]", "roomB":"[msg1, msg2]" }
+  // ideal: msg1
+
+  // {
+  //   id: room_id,
+  //   time_created,
+  //   payload: {
+  //     message
+  // }
+  // },
+
   console.log('#### Redis Emit');
   let messagesObj = await redisMissedMessages(timestamp, rooms) as RedisMessage;
+
   for (let room in messagesObj) {
     // emit all messages from all subscribed rooms in which there were missed messages
-    let message = parseMessages(messagesObj[room]);
-    console.log("Message", message);
-    socket.emit("redismessage", [message, room]);
+    let messages = parseMessages(messagesObj[room]); // messages parsed out so that they are just the strings of the message
+    socket.emit("redismessage", [messages, room]);
   }
 }
 
-const emitLongTermReconnectionStateRecovery = async (socket: CustomSocket, 
-                                                     rooms: string[], 
-                                                     lastDisconnect: number) => {
+const emitLongTermReconnectionStateRecovery = async (socket: CustomSocket,
+  rooms: string[],
+  lastDisconnect: number) => {
   for (let room of rooms) {
     let messages = await readPreviousMessagesByRoom(room, lastDisconnect) as DynamoMessage[];
+    console.log("All Messages from long term state recovery", messages)
     emitMessages(socket, messages);
   }
 }
 
 const emitMessages = (socket: CustomSocket, messages: DynamoMessage[]) => {
   messages.forEach(message => {
-    let msg = message.payload
-    let timestamp = message.time_created
-    socket.emit("message", [msg, timestamp]);
+    // let msg = message.payload
+    // let timestamp = message.time_created
+    socket.emit("message", message.payload);
   });
 }
 

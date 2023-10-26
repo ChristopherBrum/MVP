@@ -6,12 +6,6 @@ const redisURL = process.env.CACHE_ENDPOINT || 'redis://localhost:6379';
 const redis: Redis = new Redis(redisURL);
 console.log('Connected to Redis');
 
-interface jsonData {
-  room: string;
-  message: string;
-}
-
-
 const generateRandomStringPrefix = (payload: string) => {
   const charset = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
   let result = "";
@@ -39,9 +33,9 @@ const removeRandomStringPrefixs = (arrayOfMessages: string[]) => {
 //   console.log('Message stored in cache: ' + randomizedPayload);
 // }
 
-export const storeMessageInSet = async (room: string, payload: jsonData) => {
+export const storeMessageInSet = async (room: string, payload: string) => {
   let timeCreated = getCurrentTimeStamp();
-  let randomizedPayload = generateRandomStringPrefix(JSON.stringify(payload));
+  let randomizedPayload = generateRandomStringPrefix(payload);
   await redis.zadd(`${room}Set`, timeCreated, randomizedPayload);
   console.log('Message stored in cache: ' + randomizedPayload);
 }
