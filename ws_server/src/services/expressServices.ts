@@ -1,6 +1,6 @@
 import { Request, Response } from "express";
 import { io } from '../index.js';
-import { createMessage } from "src/db/dynamoService.js";
+import { createMessage } from "../db/dynamoService.js";
 import { storeMessageInSet } from '../db/redisService.js';
 
 export const homeRoute = (req: Request, res: Response) => {
@@ -50,7 +50,7 @@ export const dynamoPostmanRoute = async (req: Request, res: Response) => {
     // console.log("data:", data);
     // console.log('SENT POSTMAN MESSAGE:', data.payload);
     
-    io.to("room 1").emit("message", messageData);
+    io.to(data.room_id).emit("message", messageData);
     
     if (dynamoResponse.status_code) {
       res.status(dynamoResponse.status_code).send('ok');

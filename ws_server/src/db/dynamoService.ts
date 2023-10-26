@@ -9,7 +9,7 @@ import {
 } from "@aws-sdk/lib-dynamodb";
 import { fromEnv } from "@aws-sdk/credential-providers";
 import { unmarshall } from "@aws-sdk/util-dynamodb";
-import { getCurrentTimeStamp } from "src/utils/helpers.js";
+import { getCurrentTimeStamp } from "../utils/helpers.js";
 
 const clientConfig: DynamoDBClientConfig = { credentials: fromEnv() };
 const client = new DynamoDBClient(clientConfig);
