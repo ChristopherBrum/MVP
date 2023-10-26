@@ -26,7 +26,7 @@ socket.on('setSessionId', (sessionId) => {
 // Handle successful connection
 socket.on("message", (messageData) => {
   console.log('MessageData from client', messageData);
-  let [ payload, timestamp ] = messageData;
+  let [payload, timestamp] = messageData;
 
   socket.auth.offset = timestamp; // atLeastOnce logic
   localStorage.setItem("offset", timestamp);
@@ -41,7 +41,7 @@ socket.on("message", (messageData) => {
 // temporary, for redis message emit
 socket.on("redismessage", (messageData) => {
   console.log('MessageData for client: ', messageData);
-  let [ message, room ] = messageData;
+  let [message, room] = messageData;
   let displayMsg = `${message} from room ${room}`
   const messages = document.getElementById('messages');
   const item = document.createElement('li');
@@ -85,14 +85,19 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 socket.on('roomJoined', (message) => {
-  console.log(message);
+  console.log('message to emit: ', message);
+  const messages = document.getElementById('messages');
+  const item = document.createElement('li');
+  item.textContent = message;
+  messages.appendChild(item);
+  window.scrollTo(0, document.body.scrollHeight);
 });
 
 /*
 ------ atLeastOnceFunctionality
 Need to track a users subscribed rooms to provide state recovery upon disconnect (both intentionally & unintentionally)
 
-Updated state recovery approach: 
+Updated state recovery approach:
 - Track timestamp of each room's last message
 - Capture user's disconnect time
 - Retrive messages from Redis/Dynamo based off difference
@@ -101,8 +106,8 @@ Updated state recovery approach:
 Store rooms, where? Redis sessions table
 
 
-Upon connection, check Redis, 
-- does user exist? 
+Upon connection, check Redis,
+- does user exist?
   - no? initial connection
   - yes? how long have they been disconnected?
     - under 2min?
