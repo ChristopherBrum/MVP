@@ -1,5 +1,5 @@
 import { Redis } from "ioredis"
-import { getCurrentTimeStamp } from "src/utils/helpers.js";
+import { getCurrentTimeStamp } from "../utils/helpers.js";
 import "dotenv/config"
 
 /*
