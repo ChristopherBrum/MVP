@@ -6,12 +6,44 @@ const redisURL = process.env.CACHE_ENDPOINT || 'redis://localhost:6379';
 const redis: Redis = new Redis(redisURL);
 console.log('Connected to Redis');
 
+interface jsonData {
+  room: string;
+  message: string;
+}
+
+
+const generateRandomStringPrefix = (payload: string) => {
+  const charset = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+  let result = "";
+
+  for (let i = 0; i < 5; i++) {
+    const randomIndex = Math.floor(Math.random() * charset.length);
+    result += charset[randomIndex];
+  }
+
+  return result + payload;
+
+}
+
+const removeRandomStringPrefixs = (arrayOfMessages: string[]) => {
+  return arrayOfMessages.map(message => message.slice(5));
+}
+
 // note: payload should probably be converted to JSON before stored, to allow storing various data types
-// note: we should return 'room name < name >' does not exist error for Postman API
-export const storeMessageInSet = async (room: string, payload: string) => {
+// note: we should return 'room name < name >' does not exist error
+// for Postman API
+// export const storeMessageInSet = async (room: string, payload: string) => {
+//   let timeCreated = getCurrentTimeStamp();
+//   let randomizedPayload = generateRandomStringPrefix(payload);
+//   await redis.zadd(`${room}Set`, timeCreated, randomizedPayload);
+//   console.log('Message stored in cache: ' + randomizedPayload);
+// }
+
+export const storeMessageInSet = async (room: string, payload: jsonData) => {
   let timeCreated = getCurrentTimeStamp();
-  await redis.zadd(`${room}Set`, timeCreated, payload);
-  console.log('Message stored in cache: ' + payload);
+  let randomizedPayload = generateRandomStringPrefix(JSON.stringify(payload));
+  await redis.zadd(`${room}Set`, timeCreated, randomizedPayload);
+  console.log('Message stored in cache: ' + randomizedPayload);
 }
 
 interface SubscribedRoomMessages {
@@ -27,7 +59,9 @@ export const processSubscribedRooms = async (timestamp: number, room: string, re
     if (error) {
       console.error('Error reading sorted set:', error);
     } else {
-      result[room] = array as string[];
+      let processedMessages = removeRandomStringPrefixs(array as string[]);
+      result[room] = processedMessages;
+      console.log(processedMessages);
     }
   })
 }
@@ -70,3 +104,8 @@ export const addRoomToSession = async (sessionID: string, roomName: string) => {
 export const removeRoomFromSession = async (sessionID: string, roomName: string) => {
   await redis.hdel(`rooms:${sessionID}`, roomName);
 }
+
+/*
+Pagination
+
+*/
