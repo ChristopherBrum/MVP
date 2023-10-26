@@ -1,6 +1,6 @@
 import { v4 as uuid4 } from 'uuid';
 import { Socket } from "socket.io";
-import { setSessionTime, allSubscribedMessages, addRoomToSession } from '../db/redisService.js';
+import { setSessionTime, redisMissedMessages, addRoomToSession, checkSessionTimestamp, redisSubscribedRooms, processSubscribedRooms } from '../db/redisService.js';
 import { createMessage, readPreviousMessagesByRoom } from '../db/dynamoService.js';
 
 // this is just to make sessionId a property of a socket object
@@ -35,28 +35,26 @@ to the client directly (not to the overall room)
 const SHORT_TERM_RECOVERY_TIME_MAX = 120000;
 const LONG_TERM_RECOVERY_TIME_MAX = 86400000;
 
-const readRedisSessionInfo = (localStorageSessionId: number) => {
-  // mocked redis session data
-  /*
-  let messagesObj = await allSubscribedMessages(sessionId);
-  console.log(messagesObj);
-  return messagesObj
-  */
-  return {
-    timestamp: 1698278913080,
-    "A": "A",
-    "B": "B",
-  }
-}
-
 const resubscribe = (socket: CustomSocket, rooms: object) => {
   for (let room in rooms) {
     socket.join(room);
   }
 }
 
-const emitShortTermReconnectionStateRecovery = (socket: CustomSocket, rooms: object) => {
+// also have this in redisService; repeated
+interface RedisMessage {
+  [key: string]: string[];
+}
 
+const emitShortTermReconnectionStateRecovery = async (socket: CustomSocket, timestamp: number, rooms: string[]) => {
+  // messagesObj: { roomA:[msg1, msg2,] roomB:[msg1, msg2] }
+  console.log('#### Redis Emit');
+  let messagesObj = await redisMissedMessages(timestamp, rooms) as RedisMessage;
+  for (let room in messagesObj) {
+    // emit all messages from all subscribed rooms in which there were missed messages
+    let message = messagesObj[room];
+    socket.emit("redismessage", [message, room]);
+  }
 }
 
 const emitLongTermReconnectionStateRecovery = async (socket: CustomSocket, 
@@ -82,40 +80,38 @@ export const handleConnection = async (socket: CustomSocket) => {
 
   // client emits to this event as soon as they connect
   // we check if the localStorageSessionId has a value or is undefined
-  socket.on('sessionId', (localStorageSessionId) => {
+  socket.on('sessionId', async (localStorageSessionId) => {
     // if it is truthy, this is a reconnection
     // (if twineSessionId is in their local storage, it should also be in Redis)
     if (localStorageSessionId) { 
       console.log('#### Reconnection');
       socket.sessionId = localStorageSessionId;
       
-      // fetch session info from redis (mocked)
-      const sessionData = readRedisSessionInfo(localStorageSessionId);
+      // fetch session info from redis
+      let sessionTimestamp = await checkSessionTimestamp(localStorageSessionId)
 
       // if there is no session info in redis (last disconnect > 24 hrs ago)
-      if (!sessionData) {
+      if (!sessionTimestamp) {
         // add session info to redis and return
-        createSessionHash(localStorageSessionId);
+        setSessionTime(localStorageSessionId);
         return;
       }
-      
-      // grab timestampo and rooms data
-      let { timestamp, ...rooms } = sessionData;
-      // re-subscribe to all rooms
-      resubscribe(socket, rooms);
 
-      const timeSinceLastDisconnect = Date.now() - timestamp;
+      let subscribedRooms: string[] = await redisSubscribedRooms(localStorageSessionId)
 
-      console.log("timeSinceLastDisconnect:", timeSinceLastDisconnect);
+      // re-subscribe to all rooms they were subscribed to before disconnect
+      resubscribe(socket, subscribedRooms);
+      const timeSinceLastDisconnect = Date.now() - sessionTimestamp;
 
-      if (false) { // replace with line below
-      // if (timeSinceLastDisconnect <= SHORT_TERM_RECOVERY_TIME_MAX) { // less than 2 mins (milliseconds)
-        // fetch messages from redis and emit
-        // emitShortTermReconnectionStateRecovery(socket, rooms, timestamp);
+      console.log("timeSinceLastDisconnect: ", timeSinceLastDisconnect);
+
+      // timeSinceLastDisconnect <= SHORT_TERM_RECOVERY_TIME_MAX
+      if (true) { // less than 2 mins (milliseconds)
+        emitShortTermReconnectionStateRecovery(socket, sessionTimestamp, subscribedRooms);
       } else if (timeSinceLastDisconnect <= LONG_TERM_RECOVERY_TIME_MAX) { // less than 24 hrs (milliseconds)
         // pull messages from dynamoDB for all subscribed rooms and emit
         console.log('long term state recovery branch executed')
-        emitLongTermReconnectionStateRecovery(socket, rooms, timestamp);
+        emitLongTermReconnectionStateRecovery(socket, subscribedRooms, sessionTimestamp);
       }
 
       // update session info

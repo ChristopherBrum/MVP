@@ -19,7 +19,7 @@ interface SubscribedRoomMessages {
 }
 
 // currently fetches ALL messages missed in subscribed rooms (no pagination)
-export const processSubscribedRooms = async (timestamp: string, room: string, result: SubscribedRoomMessages) => {
+export const processSubscribedRooms = async (timestamp: number, room: string, result: SubscribedRoomMessages) => {
   // idk why .zrange doesn't work
   // https://redis.github.io/ioredis/classes/Redis.html#zrange
   // await redis.zrange(`${room}Set`, timestamp, '+inf', 'BYSCORE', (error, array) => {
@@ -32,12 +32,9 @@ export const processSubscribedRooms = async (timestamp: string, room: string, re
   })
 }
 
-export const allSubscribedMessages = async (sessionID: string) => {
-  const redisVal = await redis.get(sessionID);
-  const timestamp: string = redisVal || "";
+export const redisMissedMessages = async (timestamp: number, subscribedRoomKeys: string[]) => {
   let result = {};
 
-  const subscribedRoomKeys = await redis.hkeys(`rooms:${sessionID}`)
   for (let room of subscribedRoomKeys) {
     await processSubscribedRooms(timestamp, room, result);
   }
@@ -45,14 +42,21 @@ export const allSubscribedMessages = async (sessionID: string) => {
   return result;
 }
 
+export const redisSubscribedRooms = async (sessionID: string) => {
+  const subscribedRoomKeys = await redis.hkeys(`rooms:${sessionID}`)
+  return subscribedRoomKeys;
+}
+
 export const setSessionTime = async (sessionID: string) => {
   const currentTime = getCurrentTimeStamp();
   await redis.set(sessionID, currentTime);
 }
 
-export const checkSessionTime = async (sessionID: string) => {
+// sessionTimestamp must be converted back to number on retreival
+// because redis converts it to a string
+export const checkSessionTimestamp = async (sessionID: string) => {
   let sessionTimestamp = await redis.get(sessionID);
-  return sessionTimestamp;
+  return Number(sessionTimestamp);
 }
 
 // if the hash exists, replaced the field/value set in the hash with the new value
