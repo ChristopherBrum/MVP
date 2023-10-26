@@ -26,11 +26,11 @@ to the client directly (not to the overall room)
 // check the Redis timestamp for that sessionId
 // compare that to the current time
 // if the difference is greater than 2 minutes
-  // messages should not have expired from cache
-  // set property on socket object of reconnection type = short
+// messages should not have expired from cache
+// set property on socket object of reconnection type = short
 // else
-  // messages should be expired/gone from cache
-  // set property on socket object of reconnection type = long
+// messages should be expired/gone from cache
+// set property on socket object of reconnection type = long
 
 const SHORT_TERM_RECOVERY_TIME_MAX = 120000;
 const LONG_TERM_RECOVERY_TIME_MAX = 86400000;
@@ -47,13 +47,21 @@ interface RedisMessage {
   [key: string]: string[];
 }
 
+const parseMessages = (messagesArr: string[]) => {
+  return messagesArr.map(jsonString => {
+    let jsonObj = JSON.parse(jsonString);
+    return jsonObj["message"];
+  })
+}
+
 const emitShortTermReconnectionStateRecovery = async (socket: CustomSocket, timestamp: number, rooms: string[]) => {
   // messagesObj: { roomA:[msg1, msg2,] roomB:[msg1, msg2] }
   console.log('#### Redis Emit');
   let messagesObj = await redisMissedMessages(timestamp, rooms) as RedisMessage;
   for (let room in messagesObj) {
     // emit all messages from all subscribed rooms in which there were missed messages
-    let message = messagesObj[room];
+    let message = parseMessages(messagesObj[room]);
+    console.log("Message", message);
     socket.emit("redismessage", [message, room]);
   }
 }
@@ -83,10 +91,10 @@ export const handleConnection = async (socket: CustomSocket) => {
   socket.on('sessionId', async (localStorageSessionId) => {
     // if it is truthy, this is a reconnection
     // (if twineSessionId is in their local storage, it should also be in Redis)
-    if (localStorageSessionId) { 
+    if (localStorageSessionId) {
       console.log('#### Reconnection');
       socket.sessionId = localStorageSessionId;
-      
+
       // fetch session info from redis
       let sessionTimestamp = await checkSessionTimestamp(localStorageSessionId)
 
