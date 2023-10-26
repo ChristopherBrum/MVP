@@ -38,6 +38,18 @@ socket.on("message", (messageData) => {
   window.scrollTo(0, document.body.scrollHeight);
 });
 
+// temporary, for redis message emit
+socket.on("redismessage", (messageData) => {
+  console.log('MessageData for client: ', messageData);
+  let [ message, room ] = messageData;
+  let displayMsg = `${message} from room ${room}`
+  const messages = document.getElementById('messages');
+  const item = document.createElement('li');
+  item.textContent = displayMsg;
+  messages.appendChild(item);
+  window.scrollTo(0, document.body.scrollHeight);
+});
+
 const disconnectBtn = document.getElementById('disconnect');
 disconnectBtn.addEventListener('click', (e) => {
   e.preventDefault();

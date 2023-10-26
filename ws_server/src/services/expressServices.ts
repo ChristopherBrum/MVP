@@ -18,14 +18,10 @@ export const redisPostmanRoomsRoute = async (req: Request, res: Response) => {
 
   const data: jsonData = req.body
 
-  console.log('ROOM AND MESSAGE:', data.room, data.message);
-
   storeMessageInSet(data.room, data.message);
 
   // only people in this room should receive this message event
   io.to(`${data.room}`).emit("roomJoined", data.message);
-
-  console.log('SENT POSTMAN MESSAGE');
 
   res.send('ok');
 }
