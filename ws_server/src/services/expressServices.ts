@@ -18,7 +18,8 @@ export const redisPostmanRoomsRoute = async (req: Request, res: Response) => {
 
   const data: jsonData = req.body
 
-  storeMessageInSet(data.room, data.message);
+  // storeMessageInSet(data.room, data.message);
+  storeMessageInSet(data.room, data);
 
   // only people in this room should receive this message event
   io.to(`${data.room}`).emit("roomJoined", data.message);
@@ -37,7 +38,7 @@ export const dynamoPostmanRoute = async (req: Request, res: Response) => {
   try {
     const data = req.body;
     const dynamoResponse = await createMessage(
-      data.room_id, 
+      data.room_id,
       data.payload
     ) as DynamoCreateResponse;
 
@@ -45,9 +46,9 @@ export const dynamoPostmanRoute = async (req: Request, res: Response) => {
 
     // console.log("data:", data);
     // console.log('SENT POSTMAN MESSAGE:', data.payload);
-    
+
     io.to(data.room_id).emit("message", messageData);
-    
+
     if (dynamoResponse.status_code) {
       res.status(dynamoResponse.status_code).send('ok');
     } else {
