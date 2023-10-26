@@ -1,100 +1,68 @@
 import { Redis } from "ioredis"
-import { getCurrentTimeStamp } from "src/utils/helpers.js";
+import { getCurrentTimeStamp } from "../utils/helpers.js";
 import "dotenv/config"
-
-/*
-'sessionIdString': 'timeStampString'
-
-'sessionIdString' = {
-  timestamp,
-  room1,
-  room2,
-}
-
-sessionIdString.room3 = undefined
-sessionIdString.room2 = true
-sessionIdString.timestamp = UTC time
-
-if (reconnection) {
-  checkLongOrShort(sessionId) {
-    sessionIdString.timestamp - Date.now()
-    if () {
-      redis logic for state recovery
-    } else {
-      dynamo logic for state recovery
-    }
-  }
-}
-
-within 24hrs, ping Redis for sessionId
-after 24hrs, ping Dynamo for sessionId
-
-
-*/
 
 const redisURL = process.env.CACHE_ENDPOINT || 'redis://localhost:6379';
 const redis: Redis = new Redis(redisURL);
 console.log('Connected to Redis');
 
-// accepts array of strings
-// check if key with that name already exists so we don't overwrite *
-// creates rooms with the names of the strings in the arg array
-// sets timeCreated based on cache's internal clock (consistent)
-// sortedSetKey is a string of the name of the key of the room's eventual sorted set
-export const createRoomHash = async (rooms: string[]) => {
-  for (const room of rooms) {
-    let redisTime = await redis.time();
-    let timeCreated = redisTime.toString();
-    let sortedSetKey = `${room}Set`
-    console.log('String timestamp on new room hash: ' + timeCreated);
-    let objStore = {
-      timeCreated,
-      sortedSetKey
-    }
-    await redis.hset(room, objStore);
-  }
-}
-
-
-// room and payload must be extracted from the Postman request body then passed to this func as args
-// the name of the room sent in the Postman request body must match a room key in Redis
+// note: payload should probably be converted to JSON before stored, to allow storing various data types
 // note: we should return 'room name < name >' does not exist error for Postman API
 export const storeMessageInSet = async (room: string, payload: string) => {
   let timeCreated = getCurrentTimeStamp();
   await redis.zadd(`${room}Set`, timeCreated, payload);
+  console.log('Message stored in cache: ' + payload);
 }
 
-// accepts three string args: room, time, limit
-// time arg must match format of Redis timestamp; will be associated with user sessionID (not argument?)
-// room arg must match a room key in Redis
-// limit arg determines how many messages to retrieve from the timestamp
-  // for pagination and overall efficiency, we should retrieve X amount at a time
-    // to show next batch of missed messaged, can call this again with updated timestamp
-export const retrieveMsgsByRoomAndTime = async (room: string, sessionID: string) => {
-  let redisVal = await redis.get(sessionID);
-  const timestamp: string = redisVal || "";
+interface SubscribedRoomMessages {
+  [key: string]: string[];
+}
 
-  // timestamp is minimum timestamp of the messages that we return
-  redis.zrangebyscore(`${room}Set`, timestamp, '+inf', (error, result) => {
-  if (error) {
-    console.error('Error reading sorted set:', error);
-  } else {
-    console.log('Values of sorted set with scores greater than minTimestamp:', result);
-  }
+// currently fetches ALL messages missed in subscribed rooms (no pagination)
+export const processSubscribedRooms = async (timestamp: string, room: string, result: SubscribedRoomMessages) => {
+  // idk why .zrange doesn't work
+  // https://redis.github.io/ioredis/classes/Redis.html#zrange
+  // await redis.zrange(`${room}Set`, timestamp, '+inf', 'BYSCORE', (error, array) => {
+  await redis.zrangebyscore(`${room}Set`, timestamp, '+inf', (error, array) => {
+    if (error) {
+      console.error('Error reading sorted set:', error);
+    } else {
+      result[room] = array as string[];
+    }
   })
 }
 
-// simple k/v pair: sessionID: timestamp
-// issue global timestamp on heartbeat/disconnect/socket connection end that can be used for any room ??
-// OR timestamp is specific to each room -- suboptimal; more complicated logic and more data to store
-export const createSessionHash = async (sessionID: string) => {
-  console.log('createSessionHash sessionID: ' + sessionID);
-  const timestampInSeconds = getCurrentTimeStamp();
-  redis.set(sessionID, timestampInSeconds);
-  let zz = await redis.get(sessionID);
+export const allSubscribedMessages = async (sessionID: string) => {
+  const redisVal = await redis.get(sessionID);
+  const timestamp: string = redisVal || "";
+  let result = {};
+
+  const subscribedRoomKeys = await redis.hkeys(`rooms:${sessionID}`)
+  for (let room of subscribedRoomKeys) {
+    await processSubscribedRooms(timestamp, room, result);
+  }
+
+  return result;
+}
+
+export const setSessionTime = async (sessionID: string) => {
+  const currentTime = getCurrentTimeStamp();
+  await redis.set(sessionID, currentTime);
 }
 
 export const checkSessionTime = async (sessionID: string) => {
-  let zz = await redis.get(sessionID);
-  return zz;
+  let sessionTimestamp = await redis.get(sessionID);
+  return sessionTimestamp;
+}
+
+// if the hash exists, replaced the field/value set in the hash with the new value
+// if the hash does not exist, create it and add the roomName/roomName k/v pair
+export const addRoomToSession = async (sessionID: string, roomName: string) => {
+  await redis.hset(`rooms:${sessionID}`, roomName, roomName);
+}
+
+// hdel returns 1 if the field existed and was removed
+// hdel returns 0 if the field or hash does not exist
+export const removeRoomFromSession = async (sessionID: string, roomName: string) => {
+  await redis.hdel(`rooms:${sessionID}`, roomName);
 }

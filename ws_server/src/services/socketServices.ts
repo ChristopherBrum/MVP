@@ -1,7 +1,7 @@
 import { v4 as uuid4 } from 'uuid';
 import { Socket } from "socket.io";
-import { createSessionHash, retrieveMsgsByRoomAndTime, checkSessionTime } from '../db/redisService.js';
-import { createMessage, readPreviousMessagesByRoom } from 'src/db/dynamoService.js'; 
+import { setSessionTime, allSubscribedMessages, addRoomToSession } from '../db/redisService.js';
+import { readPreviousMessagesByRoom } from '../db/dynamoService.js'; 
 
 // this is just to make sessionId a property of a socket object
 // the purpose is so that sessionId accessible within all the socket listeners
@@ -42,18 +42,20 @@ to the client directly (not to the overall room)
   // messages should be expired/gone from cache
   // set property on socket object of reconnection type = long
 const checkReconnectionType = (sessionId: string) => {
-  const lastSessionTimestamp = checkSessionTime(sessionId);
-  if (lastSessionTimestamp > '2 Minutes!') {
-    return 'dynamo';
-  } else {
-    return 'redis';
-  }
+  // const lastSessionTimestamp = checkSessionTime(sessionId);
+  // if (lastSessionTimestamp > '2 Minutes!') {
+  //   return 'dynamo';
+  // } else {
+  //   return 'redis';
+  // }
+  return 'redis';
 }
 
-const emitReconnectionStateRecovery = (socket: CustomSocket, reconnectionType: string, sessionId: string) => {
+const emitReconnectionStateRecovery = async (socket: CustomSocket, reconnectionType: string, sessionId: string) => {
   if (reconnectionType === 'redis') {
     console.log('#### Redis Reconnection')
-    retrieveMsgsByRoomAndTime('B', sessionId);
+    let messagesObj = await allSubscribedMessages(sessionId);
+    console.log(messagesObj);
   } else if (reconnectionType === 'dynamo') {
     console.log('#### Dynamo Reconnection')
     dynamoFunc(socket)
@@ -80,7 +82,7 @@ export const handleConnection = async (socket: CustomSocket) => {
       console.log('#### First Connection');
       let randomId = uuid4();
       socket.sessionId = randomId;
-      createSessionHash(randomId);
+      setSessionTime(randomId);
       socket.emit("setSessionId", randomId);
     }
   })
@@ -90,13 +92,15 @@ export const handleConnection = async (socket: CustomSocket) => {
     socket.join(roomName);
     // emits to the client that they joined the room
     socket.emit('roomJoined', `You have joined room: ${roomName}`);
+    let sessionId = socket.sessionId || '';
+    addRoomToSession(sessionId, roomName);
   });
 
   socket.on('disconnecting', () => {
     console.log('#### Disconnecting');
     // update the client's sessionId k/v pair in Redis with a new timestamp
     let sessionId = socket.sessionId || '';
-    createSessionHash(sessionId);
+    setSessionTime(sessionId);
   })
 
   // default always join this room, for mongoPostmanRoute

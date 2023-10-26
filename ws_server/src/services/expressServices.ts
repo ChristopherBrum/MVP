@@ -1,6 +1,6 @@
 import { Request, Response } from "express";
 import { io } from '../index.js';
-import { createMessage } from "src/db/dynamoService.js";
+import { createMessage } from "../db/dynamoService.js";
 import { storeMessageInSet } from '../db/redisService.js';
 
 export const homeRoute = (req: Request, res: Response) => {
@@ -18,14 +18,10 @@ export const redisPostmanRoomsRoute = async (req: Request, res: Response) => {
 
   const data: jsonData = req.body
 
-  console.log('ROOM AND MESSAGE:', data.room, data.message);
-
   storeMessageInSet(data.room, data.message);
 
   // only people in this room should receive this message event
   io.to(`${data.room}`).emit("roomJoined", data.message);
-
-  console.log('SENT POSTMAN MESSAGE');
 
   res.send('ok');
 }
