@@ -64,6 +64,7 @@ export const readPreviousMessagesByRoom = async (room_id: string, last_timestamp
     });
 
     const response = await client.send(command);
+
     const unmarshalledItems = (response.Items || []).map((item) =>
       unmarshall(item)
     );

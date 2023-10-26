@@ -1,7 +1,7 @@
 import { v4 as uuid4 } from 'uuid';
 import { Socket } from "socket.io";
 import { setSessionTime, redisMissedMessages, addRoomToSession, checkSessionTimestamp, redisSubscribedRooms, processSubscribedRooms } from '../db/redisService.js';
-import { createMessage, readPreviousMessagesByRoom } from '../db/dynamoService.js';
+import { readPreviousMessagesByRoom } from '../db/dynamoService.js';
 
 // this is just to make sessionId a property of a socket object
 // the purpose is so that sessionId accessible within all the socket listeners
@@ -35,9 +35,10 @@ to the client directly (not to the overall room)
 const SHORT_TERM_RECOVERY_TIME_MAX = 120000;
 const LONG_TERM_RECOVERY_TIME_MAX = 86400000;
 
-const resubscribe = (socket: CustomSocket, rooms: object) => {
-  for (let room in rooms) {
+const resubscribe = (socket: CustomSocket, rooms: string[]) => {
+  for (let room of rooms) {
     socket.join(room);
+    socket.emit('roomJoined', `You have joined room: ${room}`);
   }
 }
 
@@ -58,10 +59,9 @@ const emitShortTermReconnectionStateRecovery = async (socket: CustomSocket, time
 }
 
 const emitLongTermReconnectionStateRecovery = async (socket: CustomSocket, 
-                                                     rooms: object, 
+                                                     rooms: string[], 
                                                      lastDisconnect: number) => {
-  console.log("lastDisconnect:", lastDisconnect);  
-  for (let room in rooms) {
+  for (let room of rooms) {
     let messages = await readPreviousMessagesByRoom(room, lastDisconnect) as DynamoMessage[];
     emitMessages(socket, messages);
   }
@@ -106,18 +106,13 @@ export const handleConnection = async (socket: CustomSocket) => {
       console.log("timeSinceLastDisconnect: ", timeSinceLastDisconnect);
 
       // timeSinceLastDisconnect <= SHORT_TERM_RECOVERY_TIME_MAX
-      if (true) { // less than 2 mins (milliseconds)
+      if (false) { // less than 2 mins (milliseconds)
         emitShortTermReconnectionStateRecovery(socket, sessionTimestamp, subscribedRooms);
       } else if (timeSinceLastDisconnect <= LONG_TERM_RECOVERY_TIME_MAX) { // less than 24 hrs (milliseconds)
         // pull messages from dynamoDB for all subscribed rooms and emit
         console.log('long term state recovery branch executed')
         emitLongTermReconnectionStateRecovery(socket, subscribedRooms, sessionTimestamp);
       }
-
-      // update session info
-      // set timestamp to Date.now()
-
-
     } else {
       // create uuid; save it in Redis; send it to client to store in their local storage
       console.log('#### First Connection');
@@ -141,6 +136,7 @@ export const handleConnection = async (socket: CustomSocket) => {
     console.log('#### Disconnecting');
     // update the client's sessionId k/v pair in Redis with a new timestamp
     let sessionId = socket.sessionId || '';
+    console.log("sessionId:", sessionId);
     setSessionTime(sessionId);
   })
 }
