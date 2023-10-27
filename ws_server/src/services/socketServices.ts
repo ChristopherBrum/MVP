@@ -3,8 +3,6 @@ import { Socket } from "socket.io";
 import { setSessionTime, redisMissedMessages, addRoomToSession, checkSessionTimestamp, redisSubscribedRooms, processSubscribedRooms } from '../db/redisService.js';
 import { readPreviousMessagesByRoom } from '../db/dynamoService.js';
 
-// this is just to make sessionId a property of a socket object
-// the purpose is so that sessionId accessible within all the socket listeners
 interface CustomSocket extends Socket {
   sessionId?: string;
 }
@@ -12,25 +10,12 @@ interface CustomSocket extends Socket {
 interface DynamoMessage {
   id: object;
   time_created: object;
-  payload: object;
+  payload: string;
 }
 
-/*
-when a client reconnects, we check the rooms they were subscribed to
-then we automatically (no user action needed) emit the missing messages from those rooms
-to the client directly (not to the overall room)
-(how the devs display those messages in the UI is not our concern)
-*/
-
-// sessionId key should be in Redis for 24hrs
-// check the Redis timestamp for that sessionId
-// compare that to the current time
-// if the difference is greater than 2 minutes
-// messages should not have expired from cache
-// set property on socket object of reconnection type = short
-// else
-// messages should be expired/gone from cache
-// set property on socket object of reconnection type = long
+interface messageObject {
+  message: string;
+}
 
 const SHORT_TERM_RECOVERY_TIME_MAX = 120000;
 const LONG_TERM_RECOVERY_TIME_MAX = 86400000;
@@ -47,39 +32,45 @@ interface RedisMessage {
   [key: string]: string[];
 }
 
-const parseMessages = (messagesArr: string[]) => {
+const parseRedisMessages = (messagesArr: string[]) => {
   return messagesArr.map(jsonString => {
     let jsonObj = JSON.parse(jsonString);
-    return jsonObj["message"];
-  })
+    return jsonObj["payload"];
+  });
 }
 
 const emitShortTermReconnectionStateRecovery = async (socket: CustomSocket, timestamp: number, rooms: string[]) => {
-  // messagesObj: { roomA:[msg1, msg2,] roomB:[msg1, msg2] }
   console.log('#### Redis Emit');
   let messagesObj = await redisMissedMessages(timestamp, rooms) as RedisMessage;
-  for (let room in messagesObj) {
-    // emit all messages from all subscribed rooms in which there were missed messages
-    let message = parseMessages(messagesObj[room]);
-    console.log("Message", message);
-    socket.emit("redismessage", [message, room]);
-  }
-}
+  console.log("message object returned from redis", messagesObj);
 
-const emitLongTermReconnectionStateRecovery = async (socket: CustomSocket, 
-                                                     rooms: string[], 
-                                                     lastDisconnect: number) => {
-  for (let room of rooms) {
-    let messages = await readPreviousMessagesByRoom(room, lastDisconnect) as DynamoMessage[];
+  for (let room in messagesObj) {
+    let messages = parseRedisMessages(messagesObj[room]);
+    console.log("Messages for each room returned from redis", messages)
     emitMessages(socket, messages);
   }
 }
 
-const emitMessages = (socket: CustomSocket, messages: DynamoMessage[]) => {
-  messages.forEach(message => {
-    let msg = message.payload
-    let timestamp = message.time_created
-    socket.emit("message", [msg, timestamp]);
+const parseDynamoMessages = (dynamomessages: DynamoMessage[]) => {
+  return dynamomessages.map(dynamoobj => {
+    let jsonObj = JSON.parse(dynamoobj["payload"])
+    return jsonObj;
+  })
+}
+
+const emitLongTermReconnectionStateRecovery = async (socket: CustomSocket,
+  rooms: string[],
+  lastDisconnect: number) => {
+  for (let room of rooms) {
+    let messages = await readPreviousMessagesByRoom(room, lastDisconnect) as DynamoMessage[];
+    let parsedMessages = parseDynamoMessages(messages);
+    emitMessages(socket, parsedMessages);
+  }
+}
+
+const emitMessages = (socket: CustomSocket, messages: messageObject[]) => {
+  messages.forEach(messages => {
+    socket.emit("message", messages);
   });
 }
 
@@ -113,11 +104,10 @@ export const handleConnection = async (socket: CustomSocket) => {
 
       console.log("timeSinceLastDisconnect: ", timeSinceLastDisconnect);
 
-      // timeSinceLastDisconnect <= SHORT_TERM_RECOVERY_TIME_MAX
-      if (false) { // less than 2 mins (milliseconds)
+      if (timeSinceLastDisconnect <= SHORT_TERM_RECOVERY_TIME_MAX) { // less than 2 mins (milliseconds)
+        console.log('short term state recovery branch executed')
         emitShortTermReconnectionStateRecovery(socket, sessionTimestamp, subscribedRooms);
       } else if (timeSinceLastDisconnect <= LONG_TERM_RECOVERY_TIME_MAX) { // less than 24 hrs (milliseconds)
-        // pull messages from dynamoDB for all subscribed rooms and emit
         console.log('long term state recovery branch executed')
         emitLongTermReconnectionStateRecovery(socket, subscribedRooms, sessionTimestamp);
       }
@@ -148,17 +138,3 @@ export const handleConnection = async (socket: CustomSocket) => {
     setSessionTime(sessionId);
   })
 }
-
-// interface DynamoMessage {
-//   id: object;
-//   time_created: object;
-//   payload: object;
-// }
-
-// let messageArr = await dynamoService.readPreviousMessagesByRoom('C', socket.handshake.auth.offset) as DynamoMessage[];
-
-// messageArr.forEach(message => {
-//   let msg = message.payload
-//   let timestamp = message.time_created
-//   socket.emit("message", [msg, timestamp]);
-// });
