@@ -23,16 +23,6 @@ const removeRandomStringPrefixs = (arrayOfMessages: string[]) => {
   return arrayOfMessages.map(message => message.slice(5));
 }
 
-// note: payload should probably be converted to JSON before stored, to allow storing various data types
-// note: we should return 'room name < name >' does not exist error
-// for Postman API
-// export const storeMessageInSet = async (room: string, payload: string) => {
-//   let timeCreated = getCurrentTimeStamp();
-//   let randomizedPayload = generateRandomStringPrefix(payload);
-//   await redis.zadd(`${room}Set`, timeCreated, randomizedPayload);
-//   console.log('Message stored in cache: ' + randomizedPayload);
-// }
-
 export const storeMessageInSet = async (room: string, payload: string) => {
   let timeCreated = getCurrentTimeStamp();
   let randomizedPayload = generateRandomStringPrefix(payload);
@@ -55,7 +45,6 @@ export const processSubscribedRooms = async (timestamp: number, room: string, re
     } else {
       let processedMessages = removeRandomStringPrefixs(array as string[]);
       result[room] = processedMessages;
-      console.log(processedMessages);
     }
   })
 }
@@ -98,8 +87,3 @@ export const addRoomToSession = async (sessionID: string, roomName: string) => {
 export const removeRoomFromSession = async (sessionID: string, roomName: string) => {
   await redis.hdel(`rooms:${sessionID}`, roomName);
 }
-
-/*
-Pagination
-
-*/

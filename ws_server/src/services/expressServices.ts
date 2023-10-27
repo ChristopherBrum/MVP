@@ -38,7 +38,7 @@ const publishToDynamo = async (room_id: string, payload: object) => {
 }
 
 const publishToRedis = (room: string, requestData: string) => {
-  storeMessageInSet(room, requestData); // going to stay red until I update redis
+  storeMessageInSet(room, requestData);
 }
 
 export const publish = async (req: Request, res: Response) => {
@@ -54,53 +54,3 @@ export const publish = async (req: Request, res: Response) => {
 
   res.status(201).send('ok');
 }
-
-
-
-// export const redisPostmanRoomsRoute = async (req: Request, res: Response) => {
-//   // accept postman put request
-//   // publish this request.body data via websocket emit
-//   interface jsonData {
-//     room_id: string;
-//     payload: {
-
-//      }
-//   }
-
-//   // change room_id and payload for redis
-
-//   const data: jsonData = req.body
-
-//   // storeMessageInSet(data.room, data.message);
-//   storeMessageInSet(data.room, data);
-
-//   // only people in this room should receive this message event
-//   io.to(`${data.room}`).emit("roomJoined", data.message);
-
-//   res.send('ok');
-// }
-
-// export const dynamoPostmanRoute = async (req: Request, res: Response) => {
-//   try {
-//     const data = req.body;
-//     const dynamoResponse = await createMessage(
-//       data.room_id,
-//       data.payload
-//     ) as DynamoCreateResponse;
-
-//     let messageData = [data.payload, dynamoResponse.time_created];
-
-//     // console.log("data:", data);
-//     // console.log('SENT POSTMAN MESSAGE:', data.payload);
-
-//     io.to(data.room_id).emit("message", messageData);
-
-//     if (dynamoResponse.status_code) {
-//       res.status(dynamoResponse.status_code).send('ok');
-//     } else {
-//       res.status(404).send('bad request');
-//     }
-//   } catch (error) {
-//     console.log(error);
-//   }
-// }

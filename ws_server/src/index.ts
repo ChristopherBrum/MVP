@@ -34,7 +34,6 @@ interface ServerToClientEvents {
 interface ClientToServerEvents {
   hello: () => void;
   message: (message: messageObject) => void;
-  roomJoined: (message: string) => void;
   session: (message: SessionObject) => void;
 }
 
@@ -74,8 +73,6 @@ io.on("connection", handleConnection);
 
 app.get('/', homeRoute);
 app.post('/api/twine', publish);
-// app.put('/api/postman/rooms', redisPostmanRoomsRoute);
-// app.post('/api/postman/dynamo', dynamoPostmanRoute);
 
 // listening on port 3001
 
