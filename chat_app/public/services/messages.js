@@ -2,7 +2,9 @@
 // Connect to the Socket.IO server
 // const socket = io('44.212.23.240:3001');
 
-const socket = io('http://localhost:3001');
+const socket = io('http://localhost:3001', {
+  withCredentials: true
+});
 
 // when the client connects
 socket.on('connect', () => {

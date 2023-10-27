@@ -1,5 +1,5 @@
 import { Redis } from "ioredis"
-import { getCurrentTimeStamp } from "../utils/helpers.js";
+import { currentTimeStamp } from "../utils/helpers.js";
 import "dotenv/config"
 
 const redisURL = process.env.CACHE_ENDPOINT || 'redis://localhost:6379';
@@ -40,7 +40,7 @@ const removeRandomStringPrefixs = (arrayOfMessages: string[]) => {
 // }
 
 export const storeMessageInSet = async (room: string, payload: jsonData) => {
-  let timeCreated = getCurrentTimeStamp();
+  let timeCreated = currentTimeStamp();
   let randomizedPayload = generateRandomStringPrefix(JSON.stringify(payload));
   await redis.zadd(`${room}Set`, timeCreated, randomizedPayload);
   console.log('Message stored in cache: ' + randomizedPayload);
@@ -82,7 +82,7 @@ export const redisSubscribedRooms = async (sessionID: string) => {
 }
 
 export const setSessionTime = async (sessionID: string) => {
-  const currentTime = getCurrentTimeStamp();
+  const currentTime = currentTimeStamp();
   await redis.set(sessionID, currentTime);
 }
 

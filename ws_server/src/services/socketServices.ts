@@ -1,12 +1,13 @@
-import { v4 as uuid4 } from 'uuid';
 import { Socket } from "socket.io";
 import { setSessionTime, redisMissedMessages, addRoomToSession, checkSessionTimestamp, redisSubscribedRooms, processSubscribedRooms } from '../db/redisService.js';
 import { readPreviousMessagesByRoom } from '../db/dynamoService.js';
+import { newUUID } from "../utils/helpers.js";
 
 // this is just to make sessionId a property of a socket object
 // the purpose is so that sessionId accessible within all the socket listeners
 interface CustomSocket extends Socket {
   sessionId?: string;
+  sessionTimestamp?: string;
 }
 
 interface DynamoMessage {
@@ -85,6 +86,10 @@ const emitMessages = (socket: CustomSocket, messages: DynamoMessage[]) => {
 
 // called when io.on(connect)
 export const handleConnection = async (socket: CustomSocket) => {
+  const sessionId = (socket.request as any).session?.twineID;
+  const sessionTimestamp = (socket.request as any).session?.twineTimestamp;
+  console.log('$$$$$ cookie id: ' + sessionId);
+  console.log('$$$$$ cookie timestamp: ' + sessionTimestamp);
 
   // client emits to this event as soon as they connect
   // we check if the localStorageSessionId has a value or is undefined
@@ -109,12 +114,12 @@ export const handleConnection = async (socket: CustomSocket) => {
 
       // re-subscribe to all rooms they were subscribed to before disconnect
       resubscribe(socket, subscribedRooms);
-      const timeSinceLastDisconnect = Date.now() - sessionTimestamp;
+      const timeSinceLastDisconnect = Date.now() - Number(sessionTimestamp);
 
-      console.log("timeSinceLastDisconnect: ", timeSinceLastDisconnect);
+      // console.log("timeSinceLastDisconnect: ", timeSinceLastDisconnect);
 
       // timeSinceLastDisconnect <= SHORT_TERM_RECOVERY_TIME_MAX
-      if (false) { // less than 2 mins (milliseconds)
+      if (true) { // less than 2 mins (milliseconds)
         emitShortTermReconnectionStateRecovery(socket, sessionTimestamp, subscribedRooms);
       } else if (timeSinceLastDisconnect <= LONG_TERM_RECOVERY_TIME_MAX) { // less than 24 hrs (milliseconds)
         // pull messages from dynamoDB for all subscribed rooms and emit
@@ -124,7 +129,7 @@ export const handleConnection = async (socket: CustomSocket) => {
     } else {
       // create uuid; save it in Redis; send it to client to store in their local storage
       console.log('#### First Connection');
-      let randomId = uuid4();
+      let randomId = newUUID();
       socket.sessionId = randomId;
       setSessionTime(randomId);
       socket.emit("setSessionId", randomId);
@@ -144,7 +149,7 @@ export const handleConnection = async (socket: CustomSocket) => {
     console.log('#### Disconnecting');
     // update the client's sessionId k/v pair in Redis with a new timestamp
     let sessionId = socket.sessionId || '';
-    console.log("sessionId:", sessionId);
+    // console.log("sessionId:", sessionId);
     setSessionTime(sessionId);
   })
 }

@@ -8,7 +8,7 @@ export const homeRoute = (req: Request, res: Response) => {
   res.send('Nice work')
 }
 
-export const redisPostmanRoomsRoute = async (req: Request, res: Response) => {
+export const redisPostmanRoute = async (req: Request, res: Response) => {
   // accept postman put request
   // publish this request.body data via websocket emit
   interface jsonData {
