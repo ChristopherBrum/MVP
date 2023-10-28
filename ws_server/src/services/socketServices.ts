@@ -1,5 +1,4 @@
 import { v4 as uuid4 } from 'uuid';
-import { io } from '../index.js'; // will need for io.to().emit
 import { Socket } from "socket.io";
 import { setSessionTime, redisMissedMessages, addRoomToSession, checkSessionTimestamp, redisSubscribedRooms, processSubscribedRooms } from '../db/redisService.js';
 import { readPreviousMessagesByRoom } from '../db/dynamoService.js';
@@ -73,7 +72,7 @@ const emitLongTermReconnectionStateRecovery = async (socket: CustomSocket,
 const emitMessages = (room: string, socket: CustomSocket, messages: messageObject[]) => {
   messages.forEach(messages => {
     console.log('room message is emitting to', room)
-    io.in(room).emit("message", messages);
+    socket.emit("message", messages);
   });
 }
 
