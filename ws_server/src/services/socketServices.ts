@@ -1,4 +1,5 @@
 import { v4 as uuid4 } from 'uuid';
+import { io } from '../index.js'; // will need for io.to().emit
 import { Socket } from "socket.io";
 import { setSessionTime, redisMissedMessages, addRoomToSession, checkSessionTimestamp, redisSubscribedRooms, processSubscribedRooms } from '../db/redisService.js';
 import { readPreviousMessagesByRoom } from '../db/dynamoService.js';
@@ -23,7 +24,6 @@ const LONG_TERM_RECOVERY_TIME_MAX = 86400000;
 const resubscribe = (socket: CustomSocket, rooms: string[]) => {
   for (let room of rooms) {
     socket.join(room);
-    socket.emit('roomJoined', `You have joined room: ${room}`);
   }
 }
 
@@ -47,7 +47,7 @@ const emitShortTermReconnectionStateRecovery = async (socket: CustomSocket, time
   for (let room in messagesObj) {
     let messages = parseRedisMessages(messagesObj[room]);
     console.log("Messages for each room returned from redis", messages)
-    emitMessages(socket, messages);
+    emitMessages(room, socket, messages);
   }
 }
 
@@ -63,14 +63,17 @@ const emitLongTermReconnectionStateRecovery = async (socket: CustomSocket,
   lastDisconnect: number) => {
   for (let room of rooms) {
     let messages = await readPreviousMessagesByRoom(room, lastDisconnect) as DynamoMessage[];
+    console.log("Messages object returned from Dynamo", messages)
     let parsedMessages = parseDynamoMessages(messages);
-    emitMessages(socket, parsedMessages);
+    console.log("Messages for each room parsed from Dynamo", messages)
+    emitMessages(room, socket, parsedMessages);
   }
 }
 
-const emitMessages = (socket: CustomSocket, messages: messageObject[]) => {
+const emitMessages = (room: string, socket: CustomSocket, messages: messageObject[]) => {
   messages.forEach(messages => {
-    socket.emit("message", messages);
+    console.log('room message is emitting to', room)
+    io.in(room).emit("message", messages);
   });
 }
 
