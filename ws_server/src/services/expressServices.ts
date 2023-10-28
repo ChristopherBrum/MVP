@@ -50,7 +50,7 @@ export const publish = async (req: Request, res: Response) => {
 
   console.log("Data Payload Emitting", data.payload);
 
-  io.in(data.room_id).emit("message", data.payload);
+  io.to(data.room_id).emit("message", data.payload);
 
   res.status(201).send('ok');
 }
