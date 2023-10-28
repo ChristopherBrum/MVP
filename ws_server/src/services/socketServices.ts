@@ -1,37 +1,26 @@
+import { parse } from "cookie";
 import { Socket } from "socket.io";
-import { setSessionTime, redisMissedMessages, addRoomToSession, checkSessionTimestamp, redisSubscribedRooms, processSubscribedRooms } from '../db/redisService.js';
+import { redisMissedMessages, addRoomToSession, redisSubscribedRooms } from '../db/redisService.js';
 import { readPreviousMessagesByRoom } from '../db/dynamoService.js';
-import { newUUID } from "../utils/helpers.js";
+import { hourExpiration } from '../utils/helpers.js';
+import { newCustomStore } from '../index.js';
+import { SessionData } from 'express-session';
 
-// this is just to make sessionId a property of a socket object
-// the purpose is so that sessionId accessible within all the socket listeners
 interface CustomSocket extends Socket {
-  sessionId?: string;
-  sessionTimestamp?: string;
+  twineID?: string;
+  twineTS?: number;
+  twineRC?: boolean;
 }
 
 interface DynamoMessage {
   id: object;
   time_created: object;
-  payload: object;
+  payload: string;
 }
 
-/*
-when a client reconnects, we check the rooms they were subscribed to
-then we automatically (no user action needed) emit the missing messages from those rooms
-to the client directly (not to the overall room)
-(how the devs display those messages in the UI is not our concern)
-*/
-
-// sessionId key should be in Redis for 24hrs
-// check the Redis timestamp for that sessionId
-// compare that to the current time
-// if the difference is greater than 2 minutes
-// messages should not have expired from cache
-// set property on socket object of reconnection type = short
-// else
-// messages should be expired/gone from cache
-// set property on socket object of reconnection type = long
+interface messageObject {
+  message: string;
+}
 
 const SHORT_TERM_RECOVERY_TIME_MAX = 120000;
 const LONG_TERM_RECOVERY_TIME_MAX = 86400000;
@@ -43,127 +32,121 @@ const resubscribe = (socket: CustomSocket, rooms: string[]) => {
   }
 }
 
-// also have this in redisService; repeated
+// repeated in redisService
 interface RedisMessage {
   [key: string]: string[];
 }
 
-const parseMessages = (messagesArr: string[]) => {
+const parseRedisMessages = (messagesArr: string[]) => {
   return messagesArr.map(jsonString => {
     let jsonObj = JSON.parse(jsonString);
-    return jsonObj["message"];
-  })
+    return jsonObj["payload"];
+  });
 }
 
 const emitShortTermReconnectionStateRecovery = async (socket: CustomSocket, timestamp: number, rooms: string[]) => {
-  // messagesObj: { roomA:[msg1, msg2,] roomB:[msg1, msg2] }
   console.log('#### Redis Emit');
   let messagesObj = await redisMissedMessages(timestamp, rooms) as RedisMessage;
-  for (let room in messagesObj) {
-    // emit all messages from all subscribed rooms in which there were missed messages
-    let message = parseMessages(messagesObj[room]);
-    console.log("Message", message);
-    socket.emit("redismessage", [message, room]);
-  }
-}
+  console.log("message object returned from redis", messagesObj);
 
-const emitLongTermReconnectionStateRecovery = async (socket: CustomSocket, 
-                                                     rooms: string[], 
-                                                     lastDisconnect: number) => {
-  for (let room of rooms) {
-    let messages = await readPreviousMessagesByRoom(room, lastDisconnect) as DynamoMessage[];
+  for (let room in messagesObj) {
+    let messages = parseRedisMessages(messagesObj[room]);
+    console.log("Messages for each room returned from redis", messages)
     emitMessages(socket, messages);
   }
 }
 
-const emitMessages = (socket: CustomSocket, messages: DynamoMessage[]) => {
-  messages.forEach(message => {
-    let msg = message.payload
-    let timestamp = message.time_created
-    socket.emit("message", [msg, timestamp]);
+const parseDynamoMessages = (dynamomessages: DynamoMessage[]) => {
+  return dynamomessages.map(dynamoobj => {
+    let jsonObj = JSON.parse(dynamoobj["payload"])
+    return jsonObj;
+  })
+}
+
+const emitLongTermReconnectionStateRecovery = async (socket: CustomSocket,
+  rooms: string[],
+  lastDisconnect: number) => {
+  for (let room of rooms) {
+    let messages = await readPreviousMessagesByRoom(room, lastDisconnect) as DynamoMessage[];
+    let parsedMessages = parseDynamoMessages(messages);
+    emitMessages(socket, parsedMessages);
+  }
+}
+
+const emitMessages = (socket: CustomSocket, messages: messageObject[]) => {
+  messages.forEach(messages => {
+    socket.emit("message", messages);
   });
 }
 
 // called when io.on(connect)
+// should always be a twineID and twineTS available at this point, whether reconnect or first time
 export const handleConnection = async (socket: CustomSocket) => {
-  const sessionId = (socket.request as any).session?.twineID;
-  const sessionTimestamp = (socket.request as any).session?.twineTimestamp;
-  console.log('$$$$$ cookie id: ' + sessionId);
-  console.log('$$$$$ cookie timestamp: ' + sessionTimestamp);
+  socket.twineID = (socket.request as any).session?.twineID as string;
+  socket.twineTS = (socket.request as any).session?.twineTS as number;
+  socket.twineRC = (socket.request as any).session?.twineRC as boolean;
 
-  // client emits to this event as soon as they connect
-  // we check if the localStorageSessionId has a value or is undefined
-  socket.on('sessionId', async (localStorageSessionId) => {
-    // if it is truthy, this is a reconnection
-    // (if twineSessionId is in their local storage, it should also be in Redis)
-    if (localStorageSessionId) {
-      console.log('#### Reconnection');
-      socket.sessionId = localStorageSessionId;
+  console.log('$$$$$ twineID: ' + socket.twineID);
+  console.log('$$$$$ twineTS: ' + socket.twineTS);
+  console.log('$$$$$ twineRC: ' + socket.twineRC);
 
-      // fetch session info from redis
-      let sessionTimestamp = await checkSessionTimestamp(localStorageSessionId)
+  // check twineRC to determine if reconnect
+  if (socket.twineRC) {
+    let subscribedRooms: string[] = await redisSubscribedRooms(socket.twineID)
 
-      // if there is no session info in redis (last disconnect > 24 hrs ago)
-      if (!sessionTimestamp) {
-        // add session info to redis and return
-        setSessionTime(localStorageSessionId);
-        return;
-      }
+    // re-subscribe to all rooms they were subscribed to before disconnect
+    resubscribe(socket, subscribedRooms);
+    const timeSinceLastDisconnect = Date.now() - socket.twineTS;
 
-      let subscribedRooms: string[] = await redisSubscribedRooms(localStorageSessionId)
+    console.log("timeSinceLastDisconnect: ", timeSinceLastDisconnect);
 
-      // re-subscribe to all rooms they were subscribed to before disconnect
-      resubscribe(socket, subscribedRooms);
-      const timeSinceLastDisconnect = Date.now() - Number(sessionTimestamp);
-
-      // console.log("timeSinceLastDisconnect: ", timeSinceLastDisconnect);
-
-      // timeSinceLastDisconnect <= SHORT_TERM_RECOVERY_TIME_MAX
-      if (true) { // less than 2 mins (milliseconds)
-        emitShortTermReconnectionStateRecovery(socket, sessionTimestamp, subscribedRooms);
-      } else if (timeSinceLastDisconnect <= LONG_TERM_RECOVERY_TIME_MAX) { // less than 24 hrs (milliseconds)
-        // pull messages from dynamoDB for all subscribed rooms and emit
-        console.log('long term state recovery branch executed')
-        emitLongTermReconnectionStateRecovery(socket, subscribedRooms, sessionTimestamp);
-      }
-    } else {
-      // create uuid; save it in Redis; send it to client to store in their local storage
-      console.log('#### First Connection');
-      let randomId = newUUID();
-      socket.sessionId = randomId;
-      setSessionTime(randomId);
-      socket.emit("setSessionId", randomId);
+    if (timeSinceLastDisconnect <= SHORT_TERM_RECOVERY_TIME_MAX) { // less than 2 mins (milliseconds)
+      console.log('short term state recovery branch executed')
+      emitShortTermReconnectionStateRecovery(socket, socket.twineTS, subscribedRooms);
+    } else if (timeSinceLastDisconnect <= LONG_TERM_RECOVERY_TIME_MAX) { // less than 24 hrs (milliseconds)
+      console.log('long term state recovery branch executed')
+      emitLongTermReconnectionStateRecovery(socket, subscribedRooms, socket.twineTS);
     }
-  })
+  }
 
   socket.on('join', (roomName) => {
-    // subscribes the client to the specified room
     socket.join(roomName);
-    // emits to the client that they joined the room
     socket.emit('roomJoined', `You have joined room: ${roomName}`);
-    let sessionId = socket.sessionId || '';
+    let sessionId = socket.twineID || '';
     addRoomToSession(sessionId, roomName);
   });
 
-  socket.on('disconnecting', () => {
-    console.log('#### Disconnecting');
-    // update the client's sessionId k/v pair in Redis with a new timestamp
-    let sessionId = socket.sessionId || '';
-    // console.log("sessionId:", sessionId);
-    setSessionTime(sessionId);
-  })
+  socket.on('disconnect', async () => {
+    console.log('#### Disconnected');
+
+    // Update the twineTS cookie
+    const sessionId = socket.twineID || '';
+    const newTimestamp = Date.now();
+    const sessionData: SessionData & { twineID: string; twineTS: number; twineRC: boolean } = {
+      twineID: sessionId,
+      twineTS: newTimestamp,
+      twineRC: true,
+      cookie: {
+        httpOnly: true,
+        expires: hourExpiration(),
+        originalMaxAge: null,
+      },
+    };
+
+    // Update the session data in your store
+    // If you are using the `express-session` with a custom store, you can call the `set` method on the store
+    newCustomStore.set(sessionId, sessionData, (err) => {
+      if (err) {
+        console.error('Error updating session data:', err);
+      }
+    });
+
+    // If you are using `socket.io` with `express-session`, you might also need to update the session in the request object
+    (socket.request as any).session.twineTS = newTimestamp;
+    (socket.request as any).session.save((err: Error) => {
+      if (err) {
+        console.error('Error saving session:', err);
+      }
+    });
+  });
 }
-
-// interface DynamoMessage {
-//   id: object;
-//   time_created: object;
-//   payload: object;
-// }
-
-// let messageArr = await dynamoService.readPreviousMessagesByRoom('C', socket.handshake.auth.offset) as DynamoMessage[];
-
-// messageArr.forEach(message => {
-//   let msg = message.payload
-//   let timestamp = message.time_created
-//   socket.emit("message", [msg, timestamp]);
-// });

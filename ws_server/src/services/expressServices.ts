@@ -1,31 +1,7 @@
-import { Request, Response } from "express";
+import { Request, Response, request } from "express";
 import { io } from '../index.js';
 import { createMessage } from "../db/dynamoService.js";
 import { storeMessageInSet } from '../db/redisService.js';
-
-export const homeRoute = (req: Request, res: Response) => {
-  console.log("you've got mail!");
-  res.send('Nice work')
-}
-
-export const redisPostmanRoute = async (req: Request, res: Response) => {
-  // accept postman put request
-  // publish this request.body data via websocket emit
-  interface jsonData {
-    room: string;
-    message: string;
-  }
-
-  const data: jsonData = req.body
-
-  // storeMessageInSet(data.room, data.message);
-  storeMessageInSet(data.room, data);
-
-  // only people in this room should receive this message event
-  io.to(`${data.room}`).emit("roomJoined", data.message);
-
-  res.send('ok');
-}
 
 type DynamoCreateResponse = {
   status_code: number | undefined,
@@ -34,27 +10,47 @@ type DynamoCreateResponse = {
   payload: object
 }
 
-export const dynamoPostmanRoute = async (req: Request, res: Response) => {
+interface messageObject {
+  message: string;
+}
+
+interface jsonData {
+  room_id: string;
+  payload: messageObject;
+}
+
+export const homeRoute = (req: Request, res: Response) => {
+  console.log("you've got mail!");
+  res.send('Nice work')
+}
+
+const publishToDynamo = async (room_id: string, payload: object) => {
   try {
-    const data = req.body;
     const dynamoResponse = await createMessage(
-      data.room_id,
-      data.payload
+      room_id,
+      JSON.stringify(payload)
     ) as DynamoCreateResponse;
 
-    let messageData = [data.payload, dynamoResponse.time_created];
-
-    // console.log("data:", data);
-    // console.log('SENT POSTMAN MESSAGE:', data.payload);
-
-    io.to(data.room_id).emit("message", messageData);
-
-    if (dynamoResponse.status_code) {
-      res.status(dynamoResponse.status_code).send('ok');
-    } else {
-      res.status(404).send('bad request');
-    }
+    return dynamoResponse.status_code || 404;
   } catch (error) {
     console.log(error);
   }
+}
+
+const publishToRedis = (room: string, requestData: string) => {
+  storeMessageInSet(room, requestData);
+}
+
+export const publish = async (req: Request, res: Response) => {
+  const data: jsonData = req.body
+
+  // wrap thesefunctions in Promise.all(?) and only emit if data has been created successfully
+  publishToRedis(data.room_id, JSON.stringify(data));
+  publishToDynamo(data.room_id, data.payload);
+
+  console.log("Data Payload Emitting", data.payload);
+
+  io.to(data.room_id).emit("message", data.payload as any);
+
+  res.status(201).send('ok');
 }
