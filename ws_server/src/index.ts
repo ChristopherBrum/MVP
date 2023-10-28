@@ -98,6 +98,10 @@ const cookieMiddleware = (req: Request, res: Response, next: NextFunction) => {
 app.use(sessionMiddleware);
 
 // TypeScript types
+interface messageObject {
+  message: string;
+}
+
 interface ServerToClientEvents {
   noArg: () => void;
   basicEmit: (a: number, b: string, c: Buffer) => void;
@@ -106,8 +110,7 @@ interface ServerToClientEvents {
 
 interface ClientToServerEvents {
   hello: () => void;
-  message: (message: any[]) => void;
-  roomJoined: (message: string) => void;
+  message: (message: messageObject) => void;
   session: (message: SessionObject) => void;
 }
 

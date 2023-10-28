@@ -116,6 +116,7 @@ export const handleConnection = async (socket: CustomSocket) => {
     addRoomToSession(sessionId, roomName);
   });
 
+  // disconnect vs. disconnecting difference?
   socket.on('disconnect', async () => {
     console.log('#### Disconnected');
 

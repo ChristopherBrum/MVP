@@ -1,11 +1,11 @@
-import { 
-	DynamoDBClient, 
-	DynamoDBClientConfig,
-	ScanCommand
+import {
+  DynamoDBClient,
+  DynamoDBClientConfig,
+  ScanCommand
 } from "@aws-sdk/client-dynamodb";
-import { 
-	PutCommand, 
-	DynamoDBDocumentClient 
+import {
+  PutCommand,
+  DynamoDBDocumentClient
 } from "@aws-sdk/lib-dynamodb";
 import { fromEnv } from "@aws-sdk/credential-providers";
 import { unmarshall } from "@aws-sdk/util-dynamodb";
@@ -21,7 +21,7 @@ export const createMessage = async (room_id: string, message: string) => {
     TableName: "rooms",
     Item: {
       id: room_id,
-			time_created,
+      time_created,
       payload: message
     },
   });
@@ -31,9 +31,10 @@ export const createMessage = async (room_id: string, message: string) => {
 
     // console.log('');
     // console.log('pushToDynamo -----------------------------------------------');
-    // console.log("response:", response);
+    console.log("response:", response);
     // console.log("response $metadata:", response['$metadata']);
     // console.log('');
+
 
     return {
       status_code: response['$metadata']['httpStatusCode'],
@@ -41,7 +42,7 @@ export const createMessage = async (room_id: string, message: string) => {
       time_created,
       payload: {
         message
-      } 
+      }
     }
   } catch (error) {
     console.log(error);
@@ -50,7 +51,7 @@ export const createMessage = async (room_id: string, message: string) => {
 
 export const readPreviousMessagesByRoom = async (room_id: string, last_timestamp: number) => {
   try {
-    const command = new ScanCommand({ 
+    const command = new ScanCommand({
       TableName: "rooms",
       FilterExpression: "#id = :id AND #time_created > :last_timestamp",
       ExpressionAttributeNames: {
