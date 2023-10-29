@@ -4,7 +4,7 @@ import session from 'express-session';
 import express, { Request, Response, NextFunction } from 'express';
 import { handleConnection } from './services/socketServices.js';
 import { homeRoute, publish } from './services/expressServices.js';
-import { hourExpiration, newUUID } from './utils/helpers.js';
+import { currentTimeStamp, hourExpiration, newUUID } from './utils/helpers.js';
 import { Redis } from "ioredis"
 import connectRedis from 'connect-redis';
 import 'dotenv/config'
@@ -89,6 +89,8 @@ declare module 'express-session' {
 const cookieMiddleware = (req: Request, res: Response, next: NextFunction) => {
   if (!req.session.twineID) { 
     req.session.twineID = newUUID();
+    // defualt twineTS must trigger difference of <2m or <24hr
+    req.session.twineTS = currentTimeStamp();
   } else {
     req.session.twineRC = true;
   }
