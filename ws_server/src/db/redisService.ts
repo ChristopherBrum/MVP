@@ -23,10 +23,9 @@ interface messageObject {
   timestamp: number;
 }
 
-export const storeMessageInSet = async (room: string, payload: messageObject) => {
-  let timeCreated = payload.timestamp
-  let randomizedPayload = generateRandomStringPrefix(payload.message);
-  await redis.zadd(`${room}Set`, timeCreated, randomizedPayload);
+export const storeMessageInSet = async (room: string, payload: string, timestamp: number) => {
+  let randomizedPayload = generateRandomStringPrefix(payload);
+  await redis.zadd(`${room}Set`, timestamp, randomizedPayload);
   console.log('Message stored in cache: ' + randomizedPayload);
 }
 

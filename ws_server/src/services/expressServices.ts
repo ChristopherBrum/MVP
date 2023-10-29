@@ -39,20 +39,22 @@ const publishToDynamo = async (room_id: string, payload: object) => {
   }
 }
 
-const publishToRedis = (room: string, requestData: messageObject) => {
-  storeMessageInSet(room, requestData);
+const publishToRedis = (room: string, requestData: string, timestamp: number) => {
+  storeMessageInSet(room, requestData, timestamp);
 }
 
 export const publish = async (req: Request, res: Response) => {
   const data: jsonData = req.body
-
-  data.payload["timestamp"] = currentTimeStamp();
+  
+  const time = currentTimeStamp();
 
   // wrap thesefunctions in Promise.all(?) and only emit if data has been created successfully
-  publishToRedis(data.room_id, data.payload);
+  publishToRedis(data.room_id, JSON.stringify(data), time);
   publishToDynamo(data.room_id, data.payload);
 
   console.log("Data Payload Emitting", data.payload);
+
+  data.payload["timestamp"] = time;
 
   // pass the timestamp to the message event listener on client side
   // we don't know which socket connection will receive it
