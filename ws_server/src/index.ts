@@ -4,13 +4,13 @@ import session from 'express-session';
 import express, { Request, Response, NextFunction } from 'express';
 import { handleConnection } from './services/socketServices.js';
 import { homeRoute, publish } from './services/expressServices.js';
-import { currentTimeStamp, hourExpiration, newUUID } from './utils/helpers.js';
+import { hourExpiration, newUUID } from './utils/helpers.js';
 import { Redis } from "ioredis"
 import connectRedis from 'connect-redis';
 import 'dotenv/config'
 
 const redisURL = process.env.CACHE_ENDPOINT || 'redis://localhost:6379';
-const redis: Redis = new Redis(redisURL);
+export const redis: Redis = new Redis(redisURL);
 console.log('Connected to Redis');
 
 const redisSessionStore = new connectRedis({ client: redis });

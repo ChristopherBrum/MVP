@@ -31,7 +31,7 @@ export const createMessage = async (room_id: string, message: string) => {
 
     // console.log('');
     // console.log('pushToDynamo -----------------------------------------------');
-    console.log("response:", response);
+    // console.log("response:", response);
     // console.log("response $metadata:", response['$metadata']);
     // console.log('');
 

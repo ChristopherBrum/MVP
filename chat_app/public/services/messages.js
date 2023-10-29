@@ -8,10 +8,13 @@ const socket = io('http://localhost:3001', {
 
 // Handle successful connection
 socket.on("message", (data) => {
-  console.log('data from client ---> ', data);
+  console.log('data from client: ', data);
+  if (data.timestamp) {
+    socket.emit("updateSessionTS", (data.timestamp));
+  }
   const messages = document.getElementById('messages');
   const item = document.createElement('li');
-  item.textContent = data["message"];
+  item.textContent = data.message;
   messages.appendChild(item);
   window.scrollTo(0, document.body.scrollHeight);
 });

@@ -2,6 +2,7 @@ import { Request, Response, request } from "express";
 import { io } from '../index.js';
 import { createMessage } from "../db/dynamoService.js";
 import { storeMessageInSet } from '../db/redisService.js';
+import { currentTimeStamp } from '../utils/helpers.js';
 
 type DynamoCreateResponse = {
   status_code: number | undefined,
@@ -12,6 +13,7 @@ type DynamoCreateResponse = {
 
 interface messageObject {
   message: string;
+  timestamp: number;
 }
 
 interface jsonData {
@@ -37,20 +39,24 @@ const publishToDynamo = async (room_id: string, payload: object) => {
   }
 }
 
-const publishToRedis = (room: string, requestData: string) => {
+const publishToRedis = (room: string, requestData: messageObject) => {
   storeMessageInSet(room, requestData);
 }
 
 export const publish = async (req: Request, res: Response) => {
   const data: jsonData = req.body
 
+  data.payload["timestamp"] = currentTimeStamp();
+
   // wrap thesefunctions in Promise.all(?) and only emit if data has been created successfully
-  publishToRedis(data.room_id, JSON.stringify(data));
+  publishToRedis(data.room_id, data.payload);
   publishToDynamo(data.room_id, data.payload);
 
   console.log("Data Payload Emitting", data.payload);
 
-  io.to(data.room_id).emit("message", data.payload as any);
+  // pass the timestamp to the message event listener on client side
+  // we don't know which socket connection will receive it
+  io.to(data.room_id).emit("message", data.payload);
 
   res.status(201).send('ok');
 }

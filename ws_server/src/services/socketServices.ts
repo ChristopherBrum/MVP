@@ -1,8 +1,6 @@
-import { parse } from "cookie";
 import { Socket } from "socket.io";
 import { redisMissedMessages, addRoomToSession, redisSubscribedRooms } from '../db/redisService.js';
 import { readPreviousMessagesByRoom } from '../db/dynamoService.js';
-import { hourExpiration } from '../utils/helpers.js';
 import { newCustomStore } from '../index.js';
 import { SessionData } from 'express-session';
 
@@ -32,7 +30,6 @@ const resubscribe = (socket: CustomSocket, rooms: string[]) => {
   }
 }
 
-// repeated in redisService
 interface RedisMessage {
   [key: string]: string[];
 }
@@ -91,7 +88,7 @@ export const handleConnection = async (socket: CustomSocket) => {
   console.log('$$$$$ twineRC: ' + socket.twineRC);
 
   // check twineRC to determine if reconnect
-  if (socket.twineRC) {
+  if (socket.twineRC && socket.twineTS) {
     let subscribedRooms: string[] = await redisSubscribedRooms(socket.twineID)
 
     // re-subscribe to all rooms they were subscribed to before disconnect
@@ -102,9 +99,11 @@ export const handleConnection = async (socket: CustomSocket) => {
 
     if (timeSinceLastDisconnect <= SHORT_TERM_RECOVERY_TIME_MAX) { // less than 2 mins (milliseconds)
       console.log('short term state recovery branch executed')
+      // add conditional that checks if there has been a missed message?
       emitShortTermReconnectionStateRecovery(socket, socket.twineTS, subscribedRooms);
     } else if (timeSinceLastDisconnect <= LONG_TERM_RECOVERY_TIME_MAX) { // less than 24 hrs (milliseconds)
       console.log('long term state recovery branch executed')
+      // add conditional that checks if there has been a missed message?
       emitLongTermReconnectionStateRecovery(socket, subscribedRooms, socket.twineTS);
     }
   }
@@ -118,8 +117,10 @@ export const handleConnection = async (socket: CustomSocket) => {
 
   // disconnect vs. disconnecting difference?
   socket.on('disconnect', async () => {
-    console.log('#### Disconnected');
+    console.log('#### Disconnected');   
+  });
 
+  socket.on('updateSessionTS', (newTime) => {
     // Update the twineTS cookie
     const sessionId = socket.twineID || '';
     const newTimestamp = Date.now();
@@ -129,7 +130,6 @@ export const handleConnection = async (socket: CustomSocket) => {
       twineRC: true,
       cookie: {
         httpOnly: true,
-        expires: hourExpiration(),
         originalMaxAge: null,
       },
     };

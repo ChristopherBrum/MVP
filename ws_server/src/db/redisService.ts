@@ -1,10 +1,6 @@
-import { Redis } from "ioredis"
 import { currentTimeStamp } from "../utils/helpers.js";
+import { redis } from '../index.js';
 import "dotenv/config"
-
-const redisURL = process.env.CACHE_ENDPOINT || 'redis://localhost:6379';
-const redis: Redis = new Redis(redisURL);
-console.log('Connected to Redis');
 
 const generateRandomStringPrefix = (payload: string) => {
   const charset = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
@@ -16,16 +12,20 @@ const generateRandomStringPrefix = (payload: string) => {
   }
 
   return result + payload;
-
 }
 
 const removeRandomStringPrefixs = (arrayOfMessages: string[]) => {
   return arrayOfMessages.map(message => message.slice(5));
 }
 
-export const storeMessageInSet = async (room: string, payload: string) => {
-  let timeCreated = currentTimeStamp();
-  let randomizedPayload = generateRandomStringPrefix(payload);
+interface messageObject {
+  message: string;
+  timestamp: number;
+}
+
+export const storeMessageInSet = async (room: string, payload: messageObject) => {
+  let timeCreated = payload.timestamp
+  let randomizedPayload = generateRandomStringPrefix(payload.message);
   await redis.zadd(`${room}Set`, timeCreated, randomizedPayload);
   console.log('Message stored in cache: ' + randomizedPayload);
 }
