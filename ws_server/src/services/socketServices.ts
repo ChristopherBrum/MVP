@@ -105,7 +105,7 @@ export const handleConnection = async (socket: CustomSocket) => {
     resubscribe(socket, subscribedRooms);
     const timeSinceLastTimestamp = (currentTimeStamp() - socket.twineTS);
 
-    console.log("timeSinceLastDisconnect: ", timeSinceLastTimestamp );
+    console.log("timeSinceLastDisconnect: ", timeSinceLastTimestamp);
 
     if (timeSinceLastTimestamp <= SHORT_TERM_RECOVERY_TIME_MAX) { // less than 2 mins (milliseconds)
       console.log('short term state recovery branch executed')
@@ -128,12 +128,19 @@ export const handleConnection = async (socket: CustomSocket) => {
 
   // disconnect vs. disconnecting difference?
   socket.on('disconnect', async () => {
-    console.log('#### Disconnected');   
+    console.log('#### Disconnected');
   });
 
   socket.on('updateSessionTS', (newTime) => {
     const sessionId = socket.twineID || '';
     const newTimestamp = newTime;
+    const timeSinceLastTimestamp = (currentTimeStamp() - newTimestamp);
+    const now = new Date();
+    let expirationDate = new Date(now.getTime() + LONG_TERM_RECOVERY_TIME_MAX);
+
+    if (timeSinceLastTimestamp >= LONG_TERM_RECOVERY_TIME_MAX) {
+      expirationDate = new Date(now.getTime());
+    }
 
     const sessionData: SessionData & { twineID: string; twineTS: number; twineRC: boolean } = {
       twineID: sessionId,
@@ -141,6 +148,8 @@ export const handleConnection = async (socket: CustomSocket) => {
       twineRC: true,
       cookie: {
         httpOnly: true,
+        // expire if currentTime - newTimestamp difference >= 24hrs
+        expires: expirationDate,
         originalMaxAge: null,
       },
     };
