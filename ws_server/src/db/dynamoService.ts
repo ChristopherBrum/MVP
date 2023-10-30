@@ -45,7 +45,8 @@ export const createMessage = async (room_id: string, message: string) => {
       }
     }
   } catch (error) {
-    console.log(error);
+    // console.log(error); // log error here or in #publishToDynamo?
+    return error // passing error to #publishToDynamo
   }
 };
 
