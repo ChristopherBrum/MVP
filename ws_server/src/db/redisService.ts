@@ -1,7 +1,6 @@
 import { currentTimeStamp } from "../utils/helpers.js";
 import { redis } from '../index.js';
 import "dotenv/config"
-import { messageCronJob } from "./redisCronJobs.js";
 
 const generateRandomStringPrefix = (payload: string) => {
   const charset = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
@@ -96,21 +95,3 @@ export const addRoomToSession = async (sessionID: string, roomName: string) => {
 export const removeRoomFromSession = async (sessionID: string, roomName: string) => {
   await redis.hdel(`rooms:${sessionID}`, roomName);
 }
-
-// messageCronJob();
-
-/*
-Stale messages
-- set an expitry on messages stored in the room sorted sets to 3 minutes
-- Every 3 minutes,
-- retrive all the sorted sets in redis
-- if the score of the current item in the sorted set is > 3 minutes in the past then delete it from the sorted set
-    - 180,000 miliseconds in 3 minutes
-    - timestamp of 3 minute in past = (Date.now() - 180,000)
-    - if the timestamp - 3minutes in the past time stamp is < 0, its past expiration time and should be deleted
-
-Stale room sorted sets
-- create a cron job that deletes a sortedSet if it is empty at midnight every night
-
-await redis.set(sessionID, currentTime, "EX", SECONDS_IN_A_DAY);
-*/

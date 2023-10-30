@@ -158,6 +158,10 @@ app.get('/', homeRoute);
 app.post('/api/twine', publish);
 
 // cron job redis
+setInterval(() => {
+  console.log("Interval Executing");
+  messageCronJob();
+}, 60000);
 // messageCronJob();
 
 // listening on port 3001
