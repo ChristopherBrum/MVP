@@ -25,8 +25,9 @@ interface messageObject {
 const SHORT_TERM_RECOVERY_TIME_MAX = 120000;
 const LONG_TERM_RECOVERY_TIME_MAX = 86400000;
 
-const resubscribe = (socket: CustomSocket, rooms: string[]) => {
-  for (let room of rooms) {
+const resubscribe = (socket: CustomSocket, rooms: SubscribedRooms) => {
+  const roomNames = Object.keys(rooms)
+  for (let room of roomNames) {
     socket.join(room);
     socket.emit('roomJoined', `You have joined room: ${room}`);
   }
@@ -36,6 +37,10 @@ interface RedisMessage {
   [key: string]: string[];
 }
 
+interface SubscribedRooms {
+  [key: string]: string;
+}
+
 const parseRedisMessages = (messagesArr: string[]) => {
   return messagesArr.map(jsonString => {
     let jsonObj = JSON.parse(jsonString);
@@ -43,7 +48,8 @@ const parseRedisMessages = (messagesArr: string[]) => {
   });
 }
 
-const emitShortTermReconnectionStateRecovery = async (socket: CustomSocket, timestamp: number, rooms: string[]) => {
+// rooms is now { roomA: joinTime, roomB: joinTime, etc }
+const emitShortTermReconnectionStateRecovery = async (socket: CustomSocket, timestamp: number, rooms: SubscribedRooms) => {
   console.log('#### Redis Emit');
   let messagesObj = await redisMissedMessages(timestamp, rooms) as RedisMessage;
   console.log("message object returned from redis", messagesObj);
@@ -62,15 +68,15 @@ const parseDynamoMessages = (dynamomessages: DynamoMessage[]) => {
   })
 }
 
-const emitLongTermReconnectionStateRecovery = async (socket: CustomSocket,
-  rooms: string[],
-  lastDisconnect: number) => {
-  for (let room of rooms) {
-    let messages = await readPreviousMessagesByRoom(room, lastDisconnect) as DynamoMessage[];
-    let parsedMessages = parseDynamoMessages(messages);
-    emitMessages(socket, parsedMessages);
-  }
-}
+// rooms is now { roomA: joinTime, roomB: joinTime, etc }
+// need to implement twineTS vs. joinTime logic in Dynamo
+// const emitLongTermReconnectionStateRecovery = async (socket: CustomSocket, rooms: SubscribedRooms, lastDisconnect: number) => {
+//   for (let room of rooms) {
+//     let messages = await readPreviousMessagesByRoom(room, lastDisconnect) as DynamoMessage[];
+//     let parsedMessages = parseDynamoMessages(messages);
+//     emitMessages(socket, parsedMessages);
+//   }
+// }
 
 const emitMessages = (socket: CustomSocket, messages: messageObject[]) => {
   const time = currentTimeStamp();
@@ -93,7 +99,7 @@ export const handleConnection = async (socket: CustomSocket) => {
 
   // check twineRC to determine if reconnect
   if (socket.twineRC) {
-    let subscribedRooms: string[] = await redisSubscribedRooms(socket.twineID)
+    let subscribedRooms: SubscribedRooms = await redisSubscribedRooms(socket.twineID)
 
     // re-subscribe to all rooms they were subscribed to before disconnect
     resubscribe(socket, subscribedRooms);
@@ -108,7 +114,8 @@ export const handleConnection = async (socket: CustomSocket) => {
     } else if (timeSinceLastTimestamp <= LONG_TERM_RECOVERY_TIME_MAX) { // less than 24 hrs (milliseconds)
       console.log('long term state recovery branch executed')
       // add conditional that checks if there is a missed message?  within `emitLong` before emitting?
-      emitLongTermReconnectionStateRecovery(socket, subscribedRooms, socket.twineTS);
+      // commented out because need to implement twineTS vs. joinTime logic in Dynamo
+      // emitLongTermReconnectionStateRecovery(socket, subscribedRooms, socket.twineTS);
     }
   }
 
