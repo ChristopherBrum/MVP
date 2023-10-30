@@ -1,10 +1,6 @@
-import { Redis } from "ioredis"
-import { getCurrentTimeStamp } from "../utils/helpers.js";
+import { currentTimeStamp } from "../utils/helpers.js";
+import { redis } from '../index.js';
 import "dotenv/config"
-
-const redisURL = process.env.CACHE_ENDPOINT || 'redis://localhost:6379';
-const redis: Redis = new Redis(redisURL);
-console.log('Connected to Redis');
 
 const generateRandomStringPrefix = (payload: string) => {
   const charset = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
@@ -16,17 +12,15 @@ const generateRandomStringPrefix = (payload: string) => {
   }
 
   return result + payload;
-
 }
 
 const removeRandomStringPrefixs = (arrayOfMessages: string[]) => {
   return arrayOfMessages.map(message => message.slice(5));
 }
 
-export const storeMessageInSet = async (room: string, payload: string) => {
-  let timeCreated = getCurrentTimeStamp();
+export const storeMessageInSet = async (room: string, payload: string, timestamp: number) => {
   let randomizedPayload = generateRandomStringPrefix(payload);
-  await redis.zadd(`${room}Set`, timeCreated, randomizedPayload);
+  await redis.zadd(`${room}Set`, timestamp, randomizedPayload);
   console.log('Message stored in cache: ' + randomizedPayload);
 }
 
@@ -49,23 +43,37 @@ export const processSubscribedRooms = async (timestamp: number, room: string, re
   })
 }
 
-export const redisMissedMessages = async (timestamp: number, subscribedRoomKeys: string[]) => {
+interface SubscribedRooms {
+  [key: string]: string;
+}
+
+// subscribed rooms is object with k: roomName v: joinTime
+export const redisMissedMessages = async (twineTS: number, subscribedRooms: SubscribedRooms) => {
   let result = {};
 
-  for (let room of subscribedRoomKeys) {
-    await processSubscribedRooms(timestamp, room, result);
+  // if twineTS > joinTime, then twineTS has been updated since the client joined the room
+  // if twineTS < joinTime, then twineTS default value never updated (client never received message)
+  for (let room in subscribedRooms) {
+    let joinTime = Number(subscribedRooms[room]);
+    if (twineTS > joinTime) {
+      console.log('twineTS is greater')
+      await processSubscribedRooms(twineTS+1, room, result);
+    } else {
+      console.log('joinTime is greater')
+      await processSubscribedRooms(joinTime+1, room, result);
+    }
   }
 
   return result;
 }
 
 export const redisSubscribedRooms = async (sessionID: string) => {
-  const subscribedRoomKeys = await redis.hkeys(`rooms:${sessionID}`)
+  const subscribedRoomKeys = await redis.hgetall(`rooms:${sessionID}`)
   return subscribedRoomKeys;
 }
 
 export const setSessionTime = async (sessionID: string) => {
-  const currentTime = getCurrentTimeStamp();
+  const currentTime = currentTimeStamp();
   await redis.set(sessionID, currentTime);
 }
 
@@ -79,7 +87,7 @@ export const checkSessionTimestamp = async (sessionID: string) => {
 // if the hash exists, replaced the field/value set in the hash with the new value
 // if the hash does not exist, create it and add the roomName/roomName k/v pair
 export const addRoomToSession = async (sessionID: string, roomName: string) => {
-  await redis.hset(`rooms:${sessionID}`, roomName, roomName);
+  await redis.hset(`rooms:${sessionID}`, roomName, currentTimeStamp());
 }
 
 // hdel returns 1 if the field existed and was removed

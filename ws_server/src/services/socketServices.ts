@@ -1,10 +1,14 @@
-import { v4 as uuid4 } from 'uuid';
 import { Socket } from "socket.io";
-import { setSessionTime, redisMissedMessages, addRoomToSession, checkSessionTimestamp, redisSubscribedRooms, processSubscribedRooms } from '../db/redisService.js';
+import { redisMissedMessages, addRoomToSession, redisSubscribedRooms } from '../db/redisService.js';
 import { readPreviousMessagesByRoom } from '../db/dynamoService.js';
+import { newCustomStore } from '../index.js';
+import { SessionData } from 'express-session';
+import { currentTimeStamp } from "../utils/helpers.js";
 
 interface CustomSocket extends Socket {
-  sessionId?: string;
+  twineID?: string;
+  twineTS?: number;
+  twineRC?: boolean;
 }
 
 interface DynamoMessage {
@@ -15,21 +19,26 @@ interface DynamoMessage {
 
 interface messageObject {
   message: string;
+  timestamp: number;
 }
 
 const SHORT_TERM_RECOVERY_TIME_MAX = 120000;
 const LONG_TERM_RECOVERY_TIME_MAX = 86400000;
 
-const resubscribe = (socket: CustomSocket, rooms: string[]) => {
-  for (let room of rooms) {
+const resubscribe = (socket: CustomSocket, rooms: SubscribedRooms) => {
+  const roomNames = Object.keys(rooms)
+  for (let room of roomNames) {
     socket.join(room);
     socket.emit('roomJoined', `You have joined room: ${room}`);
   }
 }
 
-// also have this in redisService; repeated
 interface RedisMessage {
   [key: string]: string[];
+}
+
+interface SubscribedRooms {
+  [key: string]: string;
 }
 
 const parseRedisMessages = (messagesArr: string[]) => {
@@ -39,7 +48,8 @@ const parseRedisMessages = (messagesArr: string[]) => {
   });
 }
 
-const emitShortTermReconnectionStateRecovery = async (socket: CustomSocket, timestamp: number, rooms: string[]) => {
+// rooms is now { roomA: joinTime, roomB: joinTime, etc }
+const emitShortTermReconnectionStateRecovery = async (socket: CustomSocket, timestamp: number, rooms: SubscribedRooms) => {
   console.log('#### Redis Emit');
   let messagesObj = await redisMissedMessages(timestamp, rooms) as RedisMessage;
   console.log("message object returned from redis", messagesObj);
@@ -58,83 +68,96 @@ const parseDynamoMessages = (dynamomessages: DynamoMessage[]) => {
   })
 }
 
-const emitLongTermReconnectionStateRecovery = async (socket: CustomSocket,
-  rooms: string[],
-  lastDisconnect: number) => {
-  for (let room of rooms) {
-    let messages = await readPreviousMessagesByRoom(room, lastDisconnect) as DynamoMessage[];
-    let parsedMessages = parseDynamoMessages(messages);
-    emitMessages(socket, parsedMessages);
-  }
-}
+// rooms is now { roomA: joinTime, roomB: joinTime, etc }
+// need to implement twineTS vs. joinTime logic in Dynamo
+// const emitLongTermReconnectionStateRecovery = async (socket: CustomSocket, rooms: SubscribedRooms, lastDisconnect: number) => {
+//   for (let room of rooms) {
+//     let messages = await readPreviousMessagesByRoom(room, lastDisconnect) as DynamoMessage[];
+//     let parsedMessages = parseDynamoMessages(messages);
+//     emitMessages(socket, parsedMessages);
+//   }
+// }
 
 const emitMessages = (socket: CustomSocket, messages: messageObject[]) => {
-  messages.forEach(messages => {
-    socket.emit("message", messages);
+  const time = currentTimeStamp();
+  messages.forEach(message => {
+    message["timestamp"] = time;
+    socket.emit("message", message);
   });
 }
 
 // called when io.on(connect)
+// should always be a twineID and twineTS available at this point, whether reconnect or first time
 export const handleConnection = async (socket: CustomSocket) => {
+  socket.twineID = (socket.request as any).session?.twineID as string;
+  socket.twineTS = (socket.request as any).session?.twineTS as number;
+  socket.twineRC = (socket.request as any).session?.twineRC as boolean;
 
-  // client emits to this event as soon as they connect
-  // we check if the localStorageSessionId has a value or is undefined
-  socket.on('sessionId', async (localStorageSessionId) => {
-    // if it is truthy, this is a reconnection
-    // (if twineSessionId is in their local storage, it should also be in Redis)
-    if (localStorageSessionId) {
-      console.log('#### Reconnection');
-      socket.sessionId = localStorageSessionId;
+  console.log('ID: ' + socket.twineID);
+  console.log('TS: ' + socket.twineTS);
+  console.log('RC: ' + socket.twineRC);
 
-      // fetch session info from redis
-      let sessionTimestamp = await checkSessionTimestamp(localStorageSessionId)
+  // check twineRC to determine if reconnect
+  if (socket.twineRC) {
+    let subscribedRooms: SubscribedRooms = await redisSubscribedRooms(socket.twineID)
 
-      // if there is no session info in redis (last disconnect > 24 hrs ago)
-      if (!sessionTimestamp) {
-        // add session info to redis and return
-        setSessionTime(localStorageSessionId);
-        return;
-      }
+    // re-subscribe to all rooms they were subscribed to before disconnect
+    resubscribe(socket, subscribedRooms);
+    const timeSinceLastTimestamp = currentTimeStamp() - socket.twineTS;
 
-      let subscribedRooms: string[] = await redisSubscribedRooms(localStorageSessionId)
+    console.log("timeSinceLastDisconnect: ", timeSinceLastTimestamp );
 
-      // re-subscribe to all rooms they were subscribed to before disconnect
-      resubscribe(socket, subscribedRooms);
-      const timeSinceLastDisconnect = Date.now() - sessionTimestamp;
-
-      console.log("timeSinceLastDisconnect: ", timeSinceLastDisconnect);
-
-      if (timeSinceLastDisconnect <= SHORT_TERM_RECOVERY_TIME_MAX) { // less than 2 mins (milliseconds)
-        console.log('short term state recovery branch executed')
-        emitShortTermReconnectionStateRecovery(socket, sessionTimestamp, subscribedRooms);
-      } else if (timeSinceLastDisconnect <= LONG_TERM_RECOVERY_TIME_MAX) { // less than 24 hrs (milliseconds)
-        console.log('long term state recovery branch executed')
-        emitLongTermReconnectionStateRecovery(socket, subscribedRooms, sessionTimestamp);
-      }
-    } else {
-      // create uuid; save it in Redis; send it to client to store in their local storage
-      console.log('#### First Connection');
-      let randomId = uuid4();
-      socket.sessionId = randomId;
-      setSessionTime(randomId);
-      socket.emit("setSessionId", randomId);
+    if (timeSinceLastTimestamp <= SHORT_TERM_RECOVERY_TIME_MAX) { // less than 2 mins (milliseconds)
+      console.log('short term state recovery branch executed')
+      // add conditional that checks if there is a missed message? within `emitShort` before emitting?
+      emitShortTermReconnectionStateRecovery(socket, socket.twineTS, subscribedRooms);
+    } else if (timeSinceLastTimestamp <= LONG_TERM_RECOVERY_TIME_MAX) { // less than 24 hrs (milliseconds)
+      console.log('long term state recovery branch executed')
+      // add conditional that checks if there is a missed message?  within `emitLong` before emitting?
+      // commented out because need to implement twineTS vs. joinTime logic in Dynamo
+      // emitLongTermReconnectionStateRecovery(socket, subscribedRooms, socket.twineTS);
     }
-  })
+  }
 
   socket.on('join', (roomName) => {
-    // subscribes the client to the specified room
     socket.join(roomName);
-    // emits to the client that they joined the room
     socket.emit('roomJoined', `You have joined room: ${roomName}`);
-    let sessionId = socket.sessionId || '';
+    let sessionId = socket.twineID || '';
     addRoomToSession(sessionId, roomName);
   });
 
-  socket.on('disconnecting', () => {
-    console.log('#### Disconnecting');
-    // update the client's sessionId k/v pair in Redis with a new timestamp
-    let sessionId = socket.sessionId || '';
-    console.log("sessionId:", sessionId);
-    setSessionTime(sessionId);
-  })
+  // disconnect vs. disconnecting difference?
+  socket.on('disconnect', async () => {
+    console.log('#### Disconnected');   
+  });
+
+  socket.on('updateSessionTS', (newTime) => {
+    const sessionId = socket.twineID || '';
+    const newTimestamp = newTime;
+
+    const sessionData: SessionData & { twineID: string; twineTS: number; twineRC: boolean } = {
+      twineID: sessionId,
+      twineTS: newTimestamp,
+      twineRC: true,
+      cookie: {
+        httpOnly: true,
+        originalMaxAge: null,
+      },
+    };
+
+    // update the session data in your store
+    newCustomStore.set(sessionId, sessionData, (err) => {
+      if (err) {
+        console.error('Error updating session data:', err);
+      }
+    });
+
+    // might also need to update the session in the request object
+    (socket.request as any).session.twineTS = newTimestamp;
+    (socket.request as any).session.save((err: Error) => {
+      if (err) {
+        console.error('Error saving session:', err);
+      }
+    });
+  });
 }

@@ -9,14 +9,14 @@ import {
 } from "@aws-sdk/lib-dynamodb";
 import { fromEnv } from "@aws-sdk/credential-providers";
 import { unmarshall } from "@aws-sdk/util-dynamodb";
-import { getCurrentTimeStamp } from "../utils/helpers.js";
+import { currentTimeStamp } from "../utils/helpers.js";
 
 const clientConfig: DynamoDBClientConfig = { credentials: fromEnv() };
 const client = new DynamoDBClient(clientConfig);
 const docClient = DynamoDBDocumentClient.from(client);
 
 export const createMessage = async (room_id: string, message: string) => {
-  const time_created = getCurrentTimeStamp();
+  const time_created = currentTimeStamp();
   const command = new PutCommand({
     TableName: "rooms",
     Item: {
@@ -31,7 +31,7 @@ export const createMessage = async (room_id: string, message: string) => {
 
     // console.log('');
     // console.log('pushToDynamo -----------------------------------------------');
-    console.log("response:", response);
+    // console.log("response:", response);
     // console.log("response $metadata:", response['$metadata']);
     // console.log('');
 
