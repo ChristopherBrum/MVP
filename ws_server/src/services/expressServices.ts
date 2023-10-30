@@ -2,6 +2,7 @@ import { Request, Response, request } from "express";
 import { io } from '../index.js';
 import { createMessage } from "../db/dynamoService.js";
 import { storeMessageInSet } from '../db/redisService.js';
+import { currentTimeStamp } from '../utils/helpers.js';
 
 type DynamoCreateResponse = {
   status_code: number | undefined,
@@ -12,6 +13,7 @@ type DynamoCreateResponse = {
 
 interface messageObject {
   message: string;
+  timestamp: number;
 }
 
 interface jsonData {
@@ -42,8 +44,8 @@ const publishToDynamo = async (room_id: string, payload: object) => {
   }
 }
 
-const publishToRedis = (room: string, requestData: string) => {
-  storeMessageInSet(room, requestData);
+const publishToRedis = (room: string, requestData: string, timestamp: number) => {
+  storeMessageInSet(room, requestData, timestamp);
 }
 
 // will need to eventually strengthen this logic
@@ -66,6 +68,8 @@ const validate = (data: jsonData) => {
 
 export const publish = async (req: Request, res: Response) => {
   const data: jsonData = req.body
+  
+  const time = currentTimeStamp();
 
   try {
     validate(data)
@@ -76,9 +80,7 @@ export const publish = async (req: Request, res: Response) => {
     console.log("Data Payload Emitting", data.payload);
 
     io.to(data.room_id).emit("message", data.payload);
-
     res.status(201).send('ok');
-
   } catch (error: any) {
     console.log(error) // later change this to logging? console.error?
     res.status(400).send(error.message)
