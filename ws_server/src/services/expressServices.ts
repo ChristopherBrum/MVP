@@ -75,9 +75,10 @@ export const publish = async (req: Request, res: Response) => {
     validate(data)
 
     await publishToDynamo(data.room_id, data.payload)
-    await publishToRedis(data.room_id, JSON.stringify(data))
+    await publishToRedis(data.room_id, JSON.stringify(data), time)
 
     console.log("Data Payload Emitting", data.payload);
+    data.payload["timestamp"] = time;
 
     io.to(data.room_id).emit("message", data.payload);
     res.status(201).send('ok');

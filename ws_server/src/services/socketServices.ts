@@ -103,7 +103,7 @@ export const handleConnection = async (socket: CustomSocket) => {
 
     // re-subscribe to all rooms they were subscribed to before disconnect
     resubscribe(socket, subscribedRooms);
-    const timeSinceLastTimestamp = currentTimeStamp() - socket.twineTS;
+    const timeSinceLastTimestamp = (currentTimeStamp() - socket.twineTS);
 
     console.log("timeSinceLastDisconnect: ", timeSinceLastTimestamp );
 
