@@ -9,8 +9,8 @@ export const newUUID = () => {
   return uuid4();
 }
 
-export const hourExpiration = () => {
+export const dayExpiraton = () => {
   const hourFromNow = new Date();
-  hourFromNow.setHours(hourFromNow.getHours() + 1);
+  hourFromNow.setHours(hourFromNow.getHours() + 24);
   return hourFromNow;
 }

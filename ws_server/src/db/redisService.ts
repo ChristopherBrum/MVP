@@ -57,10 +57,10 @@ export const redisMissedMessages = async (twineTS: number, subscribedRooms: Subs
     let joinTime = Number(subscribedRooms[room]);
     if (twineTS > joinTime) {
       console.log('twineTS is greater')
-      await processSubscribedRooms(twineTS+1, room, result);
+      await processSubscribedRooms(twineTS + 1, room, result);
     } else {
       console.log('joinTime is greater')
-      await processSubscribedRooms(joinTime+1, room, result);
+      await processSubscribedRooms(joinTime + 1, room, result);
     }
   }
 

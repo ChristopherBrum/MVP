@@ -4,8 +4,9 @@ import session from 'express-session';
 import express, { Request, Response, NextFunction } from 'express';
 import { handleConnection } from './services/socketServices.js';
 import { homeRoute, publish } from './services/expressServices.js';
-import { currentTimeStamp, hourExpiration, newUUID } from './utils/helpers.js';
+import { currentTimeStamp, dayExpiraton, newUUID } from './utils/helpers.js';
 import { Redis } from "ioredis"
+import { messageCronJob } from "./db/redisCronJobs.js";
 import connectRedis from 'connect-redis';
 import 'dotenv/config'
 
@@ -74,7 +75,7 @@ const sessionMiddleware = session({
   saveUninitialized: false,
   cookie: {
     httpOnly: true,
-    expires: hourExpiration(),
+    expires: dayExpiraton(),
   },
 });
 
@@ -87,7 +88,7 @@ declare module 'express-session' {
 }
 
 const cookieMiddleware = (req: Request, res: Response, next: NextFunction) => {
-  if (!req.session.twineID) { 
+  if (!req.session.twineID) {
     req.session.twineID = newUUID();
     // defualt twineTS must trigger difference of <2m or <24hr
     req.session.twineTS = currentTimeStamp();
@@ -155,6 +156,13 @@ io.on("connection", handleConnection);
 // Backend API
 app.get('/', homeRoute);
 app.post('/api/twine', publish);
+
+// cron job redis
+setInterval(() => {
+  console.log("Interval Executing");
+  messageCronJob();
+}, 60000);
+// messageCronJob();
 
 // listening on port 3001
 httpServer.listen(PORT, () => {
