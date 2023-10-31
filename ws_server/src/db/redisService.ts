@@ -19,9 +19,16 @@ const removeRandomStringPrefixs = (arrayOfMessages: string[]) => {
 }
 
 export const storeMessageInSet = async (room: string, payload: string, timestamp: number) => {
+  let lengthOfSet = await redis.zcard(`${room}Set`);
   let randomizedPayload = generateRandomStringPrefix(payload);
-  await redis.zadd(`${room}Set`, timestamp, randomizedPayload);
-  console.log('Message stored in cache: ' + randomizedPayload);
+
+  if (lengthOfSet >= 100) {
+    console.log("Set exceeds 100 messages, please try again later");
+    return;
+  } else {
+    await redis.zadd(`${room}Set`, timestamp, randomizedPayload);
+    console.log('Message stored in cache: ' + randomizedPayload);
+  }
 }
 
 interface SubscribedRoomMessages {
