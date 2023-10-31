@@ -9,6 +9,7 @@ import { Redis } from "ioredis"
 import { messageCronJob } from "./db/redisCronJobs.js";
 import connectRedis from 'connect-redis';
 import 'dotenv/config'
+import cron from 'node-cron';
 
 const redisURL = process.env.CACHE_ENDPOINT || 'redis://localhost:6379';
 export const redis: Redis = new Redis(redisURL);
@@ -158,10 +159,9 @@ app.get('/', homeRoute);
 app.post('/api/twine', publish);
 
 // cron job redis
-setInterval(() => {
-  messageCronJob();
-}, 60000);
-// messageCronJob();
+const cronSchedule = "*/3 * * * *"; // runs every 3 minutes
+cron.schedule(cronSchedule, messageCronJob);
+
 
 // listening on port 3001
 httpServer.listen(PORT, () => {

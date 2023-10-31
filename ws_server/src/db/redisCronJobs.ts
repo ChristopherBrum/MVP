@@ -1,4 +1,4 @@
-import { redis } from "../index.js"
+import { redis } from "../index.js";
 
 const getScoreOfItem = async (sortedSetKey: string, member: string) => {
   const score = await redis.zscore(sortedSetKey, member);
@@ -10,6 +10,7 @@ const removeItemFromSortedSet = async (sortedSetKey: string, member: string) => 
 }
 
 export const messageCronJob = () => {
+  console.log("Cron Job executed")
 
   // creates a redis stream to retrieve all sorted sets
   const stream = redis.scanStream({ type: "zset" });
@@ -36,4 +37,3 @@ export const messageCronJob = () => {
     })
   });
 };
-
