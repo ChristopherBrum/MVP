@@ -20,6 +20,7 @@ interface DynamoMessage {
 interface messageObject {
   message: string;
   timestamp: number;
+  room: string;
 }
 
 const SHORT_TERM_RECOVERY_TIME_MAX = 120000;
@@ -57,7 +58,7 @@ const emitShortTermReconnectionStateRecovery = async (socket: CustomSocket, time
   for (let room in messagesObj) {
     let messages = parseRedisMessages(messagesObj[room]);
     console.log("Messages for each room returned from redis", messages)
-    emitMessages(socket, messages);
+    emitMessages(socket, messages, room);
   }
 }
 
@@ -74,14 +75,15 @@ const parseDynamoMessages = (dynamomessages: DynamoMessage[]) => {
 //   for (let room of rooms) {
 //     let messages = await readPreviousMessagesByRoom(room, lastDisconnect) as DynamoMessage[];
 //     let parsedMessages = parseDynamoMessages(messages);
-//     emitMessages(socket, parsedMessages);
+//     emitMessages(socket, parsedMessages, room);
 //   }
 // }
 
-const emitMessages = (socket: CustomSocket, messages: messageObject[]) => {
+const emitMessages = (socket: CustomSocket, messages: messageObject[], room_id: string) => {
   const time = currentTimeStamp();
   messages.forEach(message => {
     message["timestamp"] = time;
+    message["room"] = room_id;
     socket.emit("message", message);
   });
 }

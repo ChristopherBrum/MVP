@@ -9,6 +9,7 @@ const socket = io('http://localhost:3001', {
 // Handle successful connection
 socket.on("message", (data) => {
   console.log('data from client: ', data);
+  console.log('room id from client: ', data.room);
   socket.emit("updateSessionTS", (data.timestamp));
   const messages = document.getElementById('messages');
   const item = document.createElement('li');

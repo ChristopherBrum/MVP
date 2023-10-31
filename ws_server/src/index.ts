@@ -25,12 +25,10 @@ const httpServer = createServer(app);
 
 class CustomStore extends session.Store {
   redis: session.Store;
-  // dynamo: session.Store;
 
   constructor(redis: session.Store) {
     super();
     this.redis = redis;
-    // this.dynamo = dynamo;
   }
 
   get(sid: string, callback: (err: any, session?: session.SessionData | null) => void): void {
@@ -41,28 +39,18 @@ class CustomStore extends session.Store {
         callback(null, session ?? null);
       }
     });
-    // this.dynamo.get(sid, (err, session) => {
-    //   if (err) {
-    //     callback(err);
-    //   } else {
-    //     callback(null, session ?? null);
-    //   }
-    // });
   }
 
   set(sid: string, session: session.SessionData, callback?: (err?: any) => void): void {
     this.redis.set(sid, session, callback);
-    // this.dynamo.set(sid, session, callback);
   }
 
   destroy(sid: string, callback?: (err?: any) => void): void {
     this.redis.destroy(sid, callback);
-    // this.dynamo.destroy(sid, callback);
   }
 }
 
-const redisStore: session.Store = redisSessionStore; // redis store instance
-// const dynamoStore: session.Store = dynamoSessionStore // dynamo store instance
+const redisStore: session.Store = redisSessionStore;
 const customStore = new CustomStore(redisStore);
 
 // Express Middleware

@@ -4,12 +4,12 @@ import { createMessage } from "../db/dynamoService.js";
 import { storeMessageInSet } from '../db/redisService.js';
 import { currentTimeStamp } from '../utils/helpers.js';
 
-type DynamoCreateResponse = {
-  status_code: number | undefined,
-  room_id: string,
-  time_created: number,
-  payload: object
-}
+// type DynamoCreateResponse = {
+//   status_code: number | undefined,
+//   room_id: string,
+//   time_created: number,
+//   payload: object
+// }
 
 interface messageObject {
   message: string;
@@ -58,9 +58,7 @@ const validate = (data: jsonData) => {
   } else if (!room_id || !payload) {
     throw Error('Malformed Request: One or more required parameters is missing')
 
-  } else if(room_id 
-    && (typeof payload !== 'object' 
-    || !Object.keys(payload).includes('message'))) {
+  } else if(room_id && (typeof payload !== 'object')) {
 
     throw Error('Malformed Request: One or more parameter values is of an incorrect data type.')
   }
