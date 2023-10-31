@@ -4,12 +4,12 @@ import { createMessage } from "../db/dynamoService.js";
 import { storeMessageInSet } from '../db/redisService.js';
 import { currentTimeStamp } from '../utils/helpers.js';
 
-type DynamoCreateResponse = {
-  status_code: number | undefined,
-  room_id: string,
-  time_created: number,
-  payload: object
-}
+// type DynamoCreateResponse = {
+//   status_code: number | undefined,
+//   room_id: string,
+//   time_created: number,
+//   payload: object
+// }
 
 interface messageObject {
   message: string;
