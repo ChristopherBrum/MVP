@@ -6,8 +6,8 @@ import express, { Request, Response, NextFunction } from 'express';
 import { handleConnection } from './services/socketServices.js';
 import { homeRoute, publish } from './services/expressServices.js';
 import { currentTimeStamp, dayExpiraton, newUUID } from './utils/helpers.js';
-// import { Cluster } from "ioredis"
-import { Redis } from "ioredis"
+import { Cluster } from "ioredis"
+// import { Redis } from "ioredis"
 // import { messageCronJob } from "./db/redisCronJobs.js";
 // import connectRedis from 'connect-redis';
 import 'dotenv/config'
@@ -20,17 +20,17 @@ const corsOptions = {
   credentials: true,
 };
 
-//const redisEndpoints = process.env.CACHE_ENDPOINTS ? process.env.CACHE_ENDPOINTS.split(',') : ['']
-const redisURL = "clustercfg.twine-cache.xjdmww.usw1.cache.amazonaws.com:6379"
-//const nodes = redisEndpoints.map(endpoint => {
-//  const [host, port] = endpoint.split(':');
-//  return { host, port: parseInt(port, 10) };
-//});
+const redisEndpoints = ['clustercfg.twine-cache.xjdmww.usw1.cache.amazonaws.com:6379'];
+// const redisURL = "clustercfg.twine-cache.xjdmww.usw1.cache.amazonaws.com:6379"
+const nodes = redisEndpoints.map(endpoint => {
+  const [host, port] = endpoint.split(':');
+  return { host, port: parseInt(port, 10) };
+});
 
-//export const redis = new Cluster(nodes); // Use Cluster to connect to Redis
-export const redis: Redis = new Redis(redisURL);
+export const redis = new Cluster(nodes); // Use Cluster to connect to Redis
+// export const redis: Redis = new Redis(redisURL);
 
-console.log('Connected to Redis: ', redis);
+console.log('Connected to Redis');
 
 // const redisSessionStore = new connectRedis({ client: redis });
 
@@ -223,7 +223,6 @@ app.get('/set-cookie', (req, res) => {
     console.log('RC cookie already set');
     res.send('RC cookie already set');
   }
-
 });
 
 // cron job redis
