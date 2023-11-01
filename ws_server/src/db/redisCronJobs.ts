@@ -1,3 +1,4 @@
+/*
 import { redis } from "../index.js";
 
 const getScoreOfItem = async (sortedSetKey: string, member: string) => {
@@ -37,3 +38,4 @@ export const messageCronJob = () => {
     })
   });
 };
+*/

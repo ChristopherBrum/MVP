@@ -87,7 +87,10 @@ export const setSessionTime = async (sessionID: string) => {
 // sessionTimestamp must be converted back to number on retreival
 // because redis converts it to a string
 export const checkSessionTimestamp = async (sessionID: string) => {
+  console.log('checkSessionTimestamp executed');
+  // FOUND YOU!!!!!!
   let sessionTimestamp = await redis.get(sessionID);
+  console.log('sessionTimestamp: ', sessionTimestamp);
   return Number(sessionTimestamp);
 }
 
