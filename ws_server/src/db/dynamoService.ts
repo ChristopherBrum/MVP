@@ -1,7 +1,6 @@
 import {
   DynamoDBClient,
   DynamoDBClientConfig,
-  ScanCommand,
   QueryCommand
 } from "@aws-sdk/client-dynamodb";
 import {
@@ -53,7 +52,6 @@ export const createMessage = async (room_id: string, message: string) => {
     return error // passing error to #publishToDynamo
   }
 };
-
 
 
 export const readPreviousMessagesByRoom = async (room_id: string, last_timestamp: number) => {
