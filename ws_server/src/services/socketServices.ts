@@ -70,14 +70,24 @@ const parseDynamoMessages = (dynamomessages: DynamoMessage[]) => {
 }
 
 // rooms is now { roomA: joinTime, roomB: joinTime, etc }
-// need to implement twineTS vs. joinTime logic in Dynamo
-// const emitLongTermReconnectionStateRecovery = async (socket: CustomSocket, rooms: SubscribedRooms, lastDisconnect: number) => {
-//   for (let room of rooms) {
-//     let messages = await readPreviousMessagesByRoom(room, lastDisconnect) as DynamoMessage[];
-//     let parsedMessages = parseDynamoMessages(messages);
-//     emitMessages(socket, parsedMessages, room);
-//   }
-// }
+const emitLongTermReconnectionStateRecovery = async (socket: CustomSocket, timestamp: number, rooms: SubscribedRooms) => {
+  let messages: DynamoMessage[];
+
+  for (let room in rooms) {
+    let joinTime = Number(rooms[room]);
+    if (timestamp > joinTime) { 
+      console.log('twineTS is greater')
+      messages = await readPreviousMessagesByRoom(room, timestamp + 1) as DynamoMessage[];
+    } else {
+      console.log('joinTime is greater')
+      messages = await readPreviousMessagesByRoom(room, joinTime + 1) as DynamoMessage[];
+    }
+
+    let parsedMessages = parseDynamoMessages(messages);
+    emitMessages(socket, parsedMessages, room);
+  }
+
+}
 
 const emitMessages = (socket: CustomSocket, messages: messageObject[], room_id: string) => {
   const time = currentTimeStamp();
@@ -110,6 +120,7 @@ export const handleConnection = async (socket: CustomSocket) => {
     console.log("timeSinceLastDisconnect: ", timeSinceLastTimestamp);
 
     if (timeSinceLastTimestamp <= SHORT_TERM_RECOVERY_TIME_MAX) { // less than 2 mins (milliseconds)
+    // if (false) { // less than 2 mins (milliseconds)
       console.log('short term state recovery branch executed')
       // add conditional that checks if there is a missed message? within `emitShort` before emitting?
       emitShortTermReconnectionStateRecovery(socket, socket.twineTS, subscribedRooms);
@@ -117,7 +128,7 @@ export const handleConnection = async (socket: CustomSocket) => {
       console.log('long term state recovery branch executed')
       // add conditional that checks if there is a missed message?  within `emitLong` before emitting?
       // commented out because need to implement twineTS vs. joinTime logic in Dynamo
-      // emitLongTermReconnectionStateRecovery(socket, subscribedRooms, socket.twineTS);
+      emitLongTermReconnectionStateRecovery(socket, socket.twineTS, subscribedRooms);
     }
   }
 
