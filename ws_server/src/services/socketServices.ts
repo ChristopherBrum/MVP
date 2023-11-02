@@ -72,12 +72,32 @@ const parseDynamoMessages = (dynamomessages: DynamoMessage[]) => {
 
 // rooms is now { roomA: joinTime, roomB: joinTime, etc }
 // need to implement twineTS vs. joinTime logic in Dynamo
-const emitLongTermReconnectionStateRecovery = async (socket: CustomSocket, rooms: SubscribedRooms, lastDisconnect: number) => {
+// const emitLongTermReconnectionStateRecovery = async (socket: CustomSocket, rooms: SubscribedRooms, lastDisconnect: number) => {
+//   for (let room in rooms) {
+//     let messages = await readPreviousMessagesByRoom(room, lastDisconnect) as DynamoMessage[];
+//     let parsedMessages = parseDynamoMessages(messages);
+//     emitMessages(socket, parsedMessages, room);
+//   }
+// }
+
+const emitLongTermReconnectionStateRecovery = async (socket: CustomSocket, timestamp: number, rooms: SubscribedRooms) => {
+  let messages: DynamoMessage[];
+
   for (let room in rooms) {
-    let messages = await readPreviousMessagesByRoom(room, lastDisconnect) as DynamoMessage[];
+    let joinTime = Number(rooms[room]);
+    console.log('room', room)
+    if (timestamp > joinTime) {
+      console.log('twineTS is greater')
+      messages = await readPreviousMessagesByRoom(room, timestamp + 1) as DynamoMessage[];
+    } else {
+      console.log('joinTime is greater')
+      messages = await readPreviousMessagesByRoom(room, joinTime + 1) as DynamoMessage[];
+    }
+    console.log('retrieved long-term messages', messages)
     let parsedMessages = parseDynamoMessages(messages);
     emitMessages(socket, parsedMessages, room);
   }
+
 }
 
 const emitMessages = (socket: CustomSocket, messages: messageObject[], room_id: string) => {
@@ -151,7 +171,7 @@ export const handleConnection = async (socket: CustomSocket) => {
         console.log('long term state recovery branch executed')
         // add conditional that checks if there is a missed message?  within `emitLong` before emitting?
         // commented out because need to implement twineTS vs. joinTime logic in Dynamo
-        emitLongTermReconnectionStateRecovery(socket, subscribedRooms, socket.twineTS);
+        emitLongTermReconnectionStateRecovery(socket, socket.twineTS, subscribedRooms);
       }
     }
 
