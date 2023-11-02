@@ -32,13 +32,6 @@ export const createMessage = async (room_id: string, message: string) => {
   try {
     const response = await docClient.send(command);
 
-    // console.log('');
-    // console.log('pushToDynamo -----------------------------------------------');
-    // console.log("response:", response);
-    // console.log("response $metadata:", response['$metadata']);
-    // console.log('');
-
-
     return {
       status_code: response['$metadata']['httpStatusCode'],
       room_id,
@@ -48,8 +41,7 @@ export const createMessage = async (room_id: string, message: string) => {
       }
     }
   } catch (error) {
-    // console.log(error); // log error here or in #publishToDynamo?
-    return error // passing error to #publishToDynamo
+    return error;
   }
 };
 
@@ -58,9 +50,8 @@ export const readPreviousMessagesByRoom = async (room_id: string, last_timestamp
   let responseItems: any[] = [];
   let totalItems: number = 0;
   const MAX_RETURN: number = 1000;
-  // const MAX_RETURN: number = 5;
 
-  while (totalItems < MAX_RETURN) { // retrieves at least 3 items
+  while (totalItems < MAX_RETURN) {
     const params: any = {
       TableName,
       KeyConditionExpression,
@@ -93,7 +84,6 @@ export const readPreviousMessagesByRoom = async (room_id: string, last_timestamp
         lastEvaluatedKey = LastEvaluatedKey;
       }
     } catch (error) {
-      // console.error('Error querying DynamoDB:', error);
       console.log('Error querying DynamoDB:', error);
       return error;
     }
