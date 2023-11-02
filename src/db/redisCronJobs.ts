@@ -3,11 +3,11 @@ import { redis } from "../index.js";
 const getScoreOfItem = async (sortedSetKey: string, member: string) => {
   const score = await redis.zscore(sortedSetKey, member);
   return score;
-}
+};
 
 const removeItemFromSortedSet = async (sortedSetKey: string, member: string) => {
-  await redis.zrem(sortedSetKey, member)
-}
+  await redis.zrem(sortedSetKey, member);
+};
 
 const findSortedSetsInCluster = async () => {
   let cursor = 0;
@@ -30,7 +30,7 @@ const findSortedSetsInCluster = async () => {
 };
 
 export const messageCronJob = async () => {
-  console.log("Cron Job executed")
+  console.log("Cron Job executed");
 
   let allSortedSets = await findSortedSetsInCluster();
   console.log(allSortedSets);
@@ -48,7 +48,6 @@ export const messageCronJob = async () => {
           await removeItemFromSortedSet(set, msg);
         }
       })
-
     });
   })
 };
