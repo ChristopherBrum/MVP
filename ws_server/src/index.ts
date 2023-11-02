@@ -7,6 +7,7 @@ import { handleConnection } from './services/socketServices.js';
 import { homeRoute, publish } from './services/expressServices.js';
 import { currentTimeStamp, dayExpiraton, newUUID } from './utils/helpers.js';
 import { Cluster } from "ioredis"
+import { createAdapter } from "@socket.io/redis-adapter"
 // import { Redis } from "ioredis"
 import { messageCronJob } from "./db/redisCronJobs.js";
 // import connectRedis from 'connect-redis';
@@ -169,6 +170,9 @@ export const io = new Server<
 //  headers["set-cookie"] = serialize("twine", newUUID(), { sameSite: "none", secure: true, httpOnly: true, maxAge: 24 * 60 * 60 * 1000 });
 //});
 
+// Adapter logic
+const subClient = redis.duplicate();
+io.adapter(createAdapter(redis, subClient));
 
 // WS Server Logic
 io.on("connection", handleConnection);

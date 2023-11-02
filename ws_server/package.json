@@ -25,6 +25,8 @@
     "@aws-sdk/credential-providers": "^3.430.0",
     "@aws-sdk/lib-dynamodb": "^3.430.0",
     "@aws-sdk/util-dynamodb": "^3.433.0",
+    "@socket.io/redis-adapter": "^8.2.1",
+    "@types/redis": "^4.0.11",
     "connect-redis": "^7.1.0",
     "cookie": "^0.5.0",
     "cookie-session": "^2.0.0",
@@ -36,6 +38,7 @@
     "mongodb": "^6.1.0",
     "mongoose": "^5.13.20",
     "node-cron": "^3.0.2",
+    "redis": "^4.6.10",
     "socket.io": "^4.7.2",
     "uuid": "^9.0.1"
   },
