@@ -1,4 +1,3 @@
-/*
 import { redis } from "../index.js";
 
 const getScoreOfItem = async (sortedSetKey: string, member: string) => {
@@ -10,32 +9,46 @@ const removeItemFromSortedSet = async (sortedSetKey: string, member: string) => 
   await redis.zrem(sortedSetKey, member)
 }
 
-export const messageCronJob = () => {
+const findSortedSetsInCluster = async () => {
+  let cursor = 0;
+  const sortedSets = [];
+
+  do {
+    const [newCursor, keys] = await redis.scan(cursor);
+
+    for (const key of keys) {
+      const type = await redis.type(key);
+      if (type === "zset") {
+        sortedSets.push(key);
+      }
+    }
+
+    cursor = Number(newCursor);
+  } while (cursor !== 0);
+
+  return sortedSets;
+};
+
+export const messageCronJob = async () => {
   console.log("Cron Job executed")
 
-  // creates a redis stream to retrieve all sorted sets
-  const stream = redis.scanStream({ type: "zset" });
+  let allSortedSets = await findSortedSetsInCluster();
+  console.log(allSortedSets);
 
-  stream.on("data", (resultKeys) => {
-    // allSortedSets is an array of all of the sorted sets in the Redis caches
-    let allSortedSets = resultKeys;
+  allSortedSets.forEach((set: string) => {
+    // create a stream to iterate through the members of each sorted set
+    const setStream = redis.zscanStream(set);
 
-    allSortedSets.forEach((set: string) => {
-      // create a stream to iterate through the members of each sorted set
-      const setStream = redis.zscanStream(set);
+    setStream.on("data", (allMessages) => {
 
-      setStream.on("data", (allMessages) => {
+      // iterate through all the messages in each sorted set
+      allMessages.forEach(async (msg: string) => {
+        let score = await getScoreOfItem(set, msg);
+        if (score && (Number(score) < (Date.now() - 180000))) {
+          await removeItemFromSortedSet(set, msg);
+        }
+      })
 
-        // iterate through all the messages in each sorted set
-        allMessages.forEach(async (msg: string) => {
-          let score = await getScoreOfItem(set, msg);
-          if (score && (Number(score) < (Date.now() - 180000))) {
-            await removeItemFromSortedSet(set, msg);
-          }
-        })
-
-      });
-    })
-  });
+    });
+  })
 };
-*/

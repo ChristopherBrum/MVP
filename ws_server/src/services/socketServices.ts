@@ -72,13 +72,13 @@ const parseDynamoMessages = (dynamomessages: DynamoMessage[]) => {
 
 // rooms is now { roomA: joinTime, roomB: joinTime, etc }
 // need to implement twineTS vs. joinTime logic in Dynamo
-// const emitLongTermReconnectionStateRecovery = async (socket: CustomSocket, rooms: SubscribedRooms, lastDisconnect: number) => {
-//   for (let room of rooms) {
-//     let messages = await readPreviousMessagesByRoom(room, lastDisconnect) as DynamoMessage[];
-//     let parsedMessages = parseDynamoMessages(messages);
-//     emitMessages(socket, parsedMessages, room);
-//   }
-// }
+const emitLongTermReconnectionStateRecovery = async (socket: CustomSocket, rooms: SubscribedRooms, lastDisconnect: number) => {
+  for (let room in rooms) {
+    let messages = await readPreviousMessagesByRoom(room, lastDisconnect) as DynamoMessage[];
+    let parsedMessages = parseDynamoMessages(messages);
+    emitMessages(socket, parsedMessages, room);
+  }
+}
 
 const emitMessages = (socket: CustomSocket, messages: messageObject[], room_id: string) => {
   const time = currentTimeStamp();
@@ -93,69 +93,69 @@ const emitMessages = (socket: CustomSocket, messages: messageObject[], room_id: 
 // should always be a twineID and twineTS available at this point, whether reconnect or first time
 export const handleConnection = async (socket: CustomSocket) => {
 
-socket.on('stateRecovery', async () => {
-  
-  // socket.twineID = (socket.request as any).session?.twineID as string;
-  // socket.twineTS = (socket.request as any).session?.twineTS as number;
-  // socket.twineRC = (socket.request as any).session?.twineRC as boolean;
+  socket.on('stateRecovery', async () => {
 
-  const cookiesData = socket.handshake.headers.cookie as string;
-  const parsedCookies = parse(cookiesData);
-  let sessionId = parsedCookies.twinert;
-  let sessionRc = parsedCookies.twinerc || false
+    // socket.twineID = (socket.request as any).session?.twineID as string;
+    // socket.twineTS = (socket.request as any).session?.twineTS as number;
+    // socket.twineRC = (socket.request as any).session?.twineRC as boolean;
 
-  if (sessionId) {
-    console.log('Twine Session: ', sessionId);
-   
-  } else {
-    console.log('No session found');
-  }
-   
-  const currDate = new Date();
-  currDate.setHours(currDate.getHours() - 25);
-  const oldDate = currDate.getTime();
+    const cookiesData = socket.handshake.headers.cookie as string;
+    const parsedCookies = parse(cookiesData);
+    let sessionId = parsedCookies.twinert;
+    let sessionRc = parsedCookies.twinerc || false
 
-  if (sessionRc) {
-    console.log('Reconnect Session');
-  }
+    if (sessionId) {
+      console.log('Twine Session: ', sessionId);
 
-  socket.twineID = sessionId || 'a';
-  let redisTS = await checkSessionTimestamp(socket.twineID)
-  console.log('AFTER REDIS TS');  
- 
-  console.log(redisTS);
-  checkSessionTimestamp(socket.twineID)
-    .then(data => {
-      redisTS = data;
-    });
-
-  socket.twineTS = redisTS || oldDate;
-
-  console.log(redisTS);
-  // check sessionRc to determine if reconnect  
-  console.log(sessionRc);
-  if (sessionRc) {
-    let subscribedRooms: SubscribedRooms = await redisSubscribedRooms(socket.twineID)
-
-    // re-subscribe to all rooms they were subscribed to before disconnect
-    resubscribe(socket, subscribedRooms);
-    const timeSinceLastTimestamp = (currentTimeStamp() - socket.twineTS);
-
-    console.log("timeSinceLastDisconnect: ", timeSinceLastTimestamp);
-
-    if (timeSinceLastTimestamp <= SHORT_TERM_RECOVERY_TIME_MAX) { // less than 2 mins (milliseconds)
-      console.log('short term state recovery branch executed')
-      // add conditional that checks if there is a missed message? within `emitShort` before emitting?
-      emitShortTermReconnectionStateRecovery(socket, socket.twineTS, subscribedRooms);
-    } else if (timeSinceLastTimestamp <= LONG_TERM_RECOVERY_TIME_MAX) { // less than 24 hrs (milliseconds)
-      console.log('long term state recovery branch executed')
-      // add conditional that checks if there is a missed message?  within `emitLong` before emitting?
-      // commented out because need to implement twineTS vs. joinTime logic in Dynamo
-      // emitLongTermReconnectionStateRecovery(socket, subscribedRooms, socket.twineTS);
+    } else {
+      console.log('No session found');
     }
-  }
-  
-});
+
+    const currDate = new Date();
+    currDate.setHours(currDate.getHours() - 25);
+    const oldDate = currDate.getTime();
+
+    if (sessionRc) {
+      console.log('Reconnect Session');
+    }
+
+    socket.twineID = sessionId || 'a';
+    let redisTS = await checkSessionTimestamp(socket.twineID)
+    console.log('AFTER REDIS TS');
+
+    console.log(redisTS);
+    checkSessionTimestamp(socket.twineID)
+      .then(data => {
+        redisTS = data;
+      });
+
+    socket.twineTS = redisTS || oldDate;
+
+    console.log(redisTS);
+    // check sessionRc to determine if reconnect
+    console.log(sessionRc);
+    if (sessionRc) {
+      let subscribedRooms: SubscribedRooms = await redisSubscribedRooms(socket.twineID)
+
+      // re-subscribe to all rooms they were subscribed to before disconnect
+      resubscribe(socket, subscribedRooms);
+      const timeSinceLastTimestamp = (currentTimeStamp() - socket.twineTS);
+
+      console.log("timeSinceLastDisconnect: ", timeSinceLastTimestamp);
+
+      if (timeSinceLastTimestamp <= SHORT_TERM_RECOVERY_TIME_MAX) { // less than 2 mins (milliseconds)
+        console.log('short term state recovery branch executed')
+        // add conditional that checks if there is a missed message? within `emitShort` before emitting?
+        emitShortTermReconnectionStateRecovery(socket, socket.twineTS, subscribedRooms);
+      } else if (timeSinceLastTimestamp <= LONG_TERM_RECOVERY_TIME_MAX) { // less than 24 hrs (milliseconds)
+        console.log('long term state recovery branch executed')
+        // add conditional that checks if there is a missed message?  within `emitLong` before emitting?
+        // commented out because need to implement twineTS vs. joinTime logic in Dynamo
+        emitLongTermReconnectionStateRecovery(socket, subscribedRooms, socket.twineTS);
+      }
+    }
+
+  });
 
   socket.on('join', async (roomName) => {
     socket.join(roomName);

@@ -8,7 +8,7 @@ import { homeRoute, publish } from './services/expressServices.js';
 import { currentTimeStamp, dayExpiraton, newUUID } from './utils/helpers.js';
 import { Cluster } from "ioredis"
 // import { Redis } from "ioredis"
-// import { messageCronJob } from "./db/redisCronJobs.js";
+import { messageCronJob } from "./db/redisCronJobs.js";
 // import connectRedis from 'connect-redis';
 import 'dotenv/config'
 import cron from 'node-cron';
@@ -20,7 +20,7 @@ const corsOptions = {
   credentials: true,
 };
 
-const redisEndpoints = ['clustercfg.twine-cache.xjdmww.usw1.cache.amazonaws.com:6379'];
+const redisEndpoints = ['micro-redis.xjdmww.clustercfg.usw1.cache.amazonaws.com:6379'];
 // const redisURL = "clustercfg.twine-cache.xjdmww.usw1.cache.amazonaws.com:6379"
 const nodes = redisEndpoints.map(endpoint => {
   const [host, port] = endpoint.split(':');
@@ -34,7 +34,7 @@ console.log('Connected to Redis');
 
 // const redisSessionStore = new connectRedis({ client: redis });
 
-const PORT = process.env.ENV_PORT || 3001;
+const PORT = 3003;
 
 const app = express();
 app.use(cors(corsOptions));
@@ -154,7 +154,7 @@ export const io = new Server<
   SocketData
 >(httpServer, {
   cors: {
-    origin: '*', 
+    origin: '*',
     methods: ['GET', 'POST'],
     credentials: true,
   },
@@ -191,7 +191,7 @@ app.get('/delete-cookie', (req, res) => {
 // Frontend code now sends request to this route before establishing WebSocket connection
 app.get('/set-cookie', (req, res) => {
   const cookies = req.headers.cookie || '';
-  
+
   // Parse the cookies
   const cookiesObj = Object.fromEntries(cookies.split(';').map(cookie => {
     const [name, value] = cookie.trim().split('=');
@@ -226,8 +226,8 @@ app.get('/set-cookie', (req, res) => {
 });
 
 // cron job redis
-//const cronSchedule = "*/3 * * * *"; // runs every 3 minutes
-//cron.schedule(cronSchedule, messageCronJob);
+const cronSchedule = "*/3 * * * *"; // runs every 3 minutes
+cron.schedule(cronSchedule, messageCronJob);
 
 // listening on port 3001
 httpServer.listen(PORT, () => {
