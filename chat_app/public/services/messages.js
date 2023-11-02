@@ -1,12 +1,14 @@
-////////// Connect to EC2 instance //////////
-// Connect to the Socket.IO server
-// const socket = io('44.212.23.240:3001');
+fetch('https://twine-rt.com/set-cookie', { credentials: 'include' })
 
-const socket = io('http://localhost:3001', {
-  withCredentials: true
+const socket = io('https://twine-rt.com', { 
+  withCredentials: true,
+  transports: ['websocket', 'polling'],
 });
 
-// Handle successful connection
+socket.on('connect', () => {
+  console.log('Connected to the Twine server');
+});
+
 socket.on("message", (data) => {
   console.log('data from client: ', data);
   console.log('room id from client: ', data.room);
@@ -16,6 +18,10 @@ socket.on("message", (data) => {
   item.textContent = data.message;
   messages.appendChild(item);
   window.scrollTo(0, document.body.scrollHeight);
+});
+
+socket.on('roomJoined', (msg) => {
+  console.log(msg);
 });
 
 const disconnectBtn = document.getElementById('disconnect');
@@ -33,7 +39,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
   options.addEventListener('change', () => {
     const selectedOption = options.value;
-
     // join room <button value> on change event
     // server then emits back to roomJoined (below)
     socket.emit('join', `${selectedOption}`);

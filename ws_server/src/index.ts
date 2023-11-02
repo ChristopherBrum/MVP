@@ -34,7 +34,7 @@ console.log('Connected to Redis');
 
 // const redisSessionStore = new connectRedis({ client: redis });
 
-const PORT = 3003;
+const PORT = 3001;
 
 const app = express();
 app.use(cors(corsOptions));
