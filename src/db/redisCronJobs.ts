@@ -1,10 +1,10 @@
 import { redis } from "../index.js";
 
-class CronJonHandler {
+class CronJobHandler {
   public static async messageCronJob() {
     console.log("Cron Job executed");
 
-    let allSortedSets = await CronJonHandler.findSortedSetsInCluster();
+    let allSortedSets = await CronJobHandler.findSortedSetsInCluster();
     console.log(allSortedSets);
 
     allSortedSets.forEach((set: string) => {
@@ -12,9 +12,9 @@ class CronJonHandler {
 
       setStream.on("data", (allMessages) => {
         allMessages.forEach(async (msg: string) => {
-          let score = await CronJonHandler.getScoreOfItem(set, msg);
+          let score = await CronJobHandler.getScoreOfItem(set, msg);
           if (score && (Number(score) < (Date.now() - 180000))) {
-            await CronJonHandler.removeItemFromSortedSet(set, msg);
+            await CronJobHandler.removeItemFromSortedSet(set, msg);
           }
         })
       });
@@ -51,4 +51,4 @@ class CronJonHandler {
   }
 }
 
-export default CronJonHandler;
+export default CronJobHandler;

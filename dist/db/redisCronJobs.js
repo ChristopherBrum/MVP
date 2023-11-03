@@ -8,21 +8,19 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 import { redis } from "../index.js";
-class CronJonHandler {
+class CronJobHandler {
     static messageCronJob() {
         return __awaiter(this, void 0, void 0, function* () {
             console.log("Cron Job executed");
-            let allSortedSets = yield CronJonHandler.findSortedSetsInCluster();
+            let allSortedSets = yield CronJobHandler.findSortedSetsInCluster();
             console.log(allSortedSets);
             allSortedSets.forEach((set) => {
-                // create a stream to iterate through the members of each sorted set
                 const setStream = redis.zscanStream(set);
                 setStream.on("data", (allMessages) => {
-                    // iterate through all the messages in each sorted set
                     allMessages.forEach((msg) => __awaiter(this, void 0, void 0, function* () {
-                        let score = yield CronJonHandler.getScoreOfItem(set, msg);
+                        let score = yield CronJobHandler.getScoreOfItem(set, msg);
                         if (score && (Number(score) < (Date.now() - 180000))) {
-                            yield CronJonHandler.removeItemFromSortedSet(set, msg);
+                            yield CronJobHandler.removeItemFromSortedSet(set, msg);
                         }
                     }));
                 });
@@ -58,4 +56,4 @@ class CronJonHandler {
         });
     }
 }
-export default CronJonHandler;
+export default CronJobHandler;
