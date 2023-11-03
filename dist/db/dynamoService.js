@@ -30,11 +30,6 @@ export const createMessage = (room_id, message) => __awaiter(void 0, void 0, voi
     });
     try {
         const response = yield docClient.send(command);
-        // console.log('');
-        // console.log('pushToDynamo -----------------------------------------------');
-        // console.log("response:", response);
-        // console.log("response $metadata:", response['$metadata']);
-        // console.log('');
         return {
             status_code: response['$metadata']['httpStatusCode'],
             room_id,
@@ -45,8 +40,7 @@ export const createMessage = (room_id, message) => __awaiter(void 0, void 0, voi
         };
     }
     catch (error) {
-        // console.log(error); // log error here or in #publishToDynamo?
-        return error; // passing error to #publishToDynamo
+        return error;
     }
 });
 export const readPreviousMessagesByRoom = (room_id, last_timestamp) => __awaiter(void 0, void 0, void 0, function* () {
@@ -54,8 +48,7 @@ export const readPreviousMessagesByRoom = (room_id, last_timestamp) => __awaiter
     let responseItems = [];
     let totalItems = 0;
     const MAX_RETURN = 1000;
-    // const MAX_RETURN: number = 5;
-    while (totalItems < MAX_RETURN) { // retrieves at least 3 items
+    while (totalItems < MAX_RETURN) {
         const params = {
             TableName,
             KeyConditionExpression,
@@ -87,7 +80,6 @@ export const readPreviousMessagesByRoom = (room_id, last_timestamp) => __awaiter
             }
         }
         catch (error) {
-            // console.error('Error querying DynamoDB:', error);
             console.log('Error querying DynamoDB:', error);
             return error;
         }

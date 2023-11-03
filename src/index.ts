@@ -6,12 +6,12 @@ import { homeRoute, publish } from './services/expressServices.js';
 import { newUUID } from './utils/helpers.js';
 import { Cluster } from "ioredis";
 import { createAdapter } from "@socket.io/redis-adapter";
-import { messageCronJob } from "./db/redisCronJobs.js";
+import CronJobHandler from "./db/redisCronJobs.js";
 import 'dotenv/config';
 import cron from 'node-cron';
 import cors from 'cors';
 
-const PORT = 3001;
+const PORT = 3003;
 const TWENTY_FOUR_HOURS = 24 * 60 * 60 * 1000;
 const redisEndpoints = ['micro-redis.xjdmww.clustercfg.usw1.cache.amazonaws.com:6379']; //remove this from source code
 const corsOptions = {
@@ -147,7 +147,7 @@ app.get('/set-cookie', (req, res) => {
 
 // cron job redis
 const cronSchedule = "*/3 * * * *"; // runs every 3 minutes
-cron.schedule(cronSchedule, messageCronJob);
+cron.schedule(cronSchedule, CronJobHandler.messageCronJob);
 
 // listening on port 3001
 httpServer.listen(PORT, () => {
