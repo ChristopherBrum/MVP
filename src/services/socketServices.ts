@@ -92,6 +92,7 @@ const emitMessages = (socket: CustomSocket, messages: messageObject[], room_id: 
   messages.forEach(message => {
     message["timestamp"] = time;
     message["room"] = room_id;
+
     socket.emit("message", message);
   });
 }

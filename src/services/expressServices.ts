@@ -7,6 +7,7 @@ import { currentTimeStamp } from '../utils/helpers.js';
 interface messageObject {
   message: string;
   timestamp: number;
+  room: string;
 };
 
 interface jsonData {
@@ -72,8 +73,9 @@ export const publish = async (req: Request, res: Response) => {
 
     console.log("Data Payload Emitting", data.payload);
     data.payload["timestamp"] = time;
+    data.payload["room"] = data.room_id;
 
-    io.to(data.room_id).emit("message", data.payload);
+    io.to(data.room_id).emit("message", data.payload); 
     res.status(201).send('ok');
   } catch (error: any) {
     console.log(error);
