@@ -1,8 +1,9 @@
 import { Socket } from "socket.io";
-import { redisMissedMessages, addRoomToSession, redisSubscribedRooms, setSessionTime, checkSessionTimestamp } from '../db/redisService.js';
+import RedisHandler from '../db/redisService.js';
 import { readPreviousMessagesByRoom } from '../db/dynamoService.js';
 import { currentTimeStamp } from "../utils/helpers.js";
 import { parse } from "cookie";
+import { Redis } from "ioredis";
 
 const SHORT_TERM_RECOVERY_TIME_MAX = 120000;
 const LONG_TERM_RECOVERY_TIME_MAX = 86400000;
@@ -51,7 +52,7 @@ const parseRedisMessages = (messagesArr: string[]) => {
 // rooms is now { roomA: joinTime, roomB: joinTime, etc }
 const emitShortTermReconnectionStateRecovery = async (socket: CustomSocket, timestamp: number, rooms: SubscribedRooms) => {
   console.log('#### Redis Emit');
-  let messagesObj = await redisMissedMessages(timestamp, rooms) as RedisMessage;
+  let messagesObj = await RedisHandler.redisMissedMessages(timestamp, rooms) as RedisMessage;
   console.log("message object returned from redis", messagesObj);
 
   for (let room in messagesObj) {
@@ -122,11 +123,11 @@ export const handleConnection = async (socket: CustomSocket) => {
     };
 
     socket.twineID = sessionId || 'a';
-    let redisTS = await checkSessionTimestamp(socket.twineID)
+    let redisTS = await RedisHandler.checkSessionTimeStamp(socket.twineID)
     console.log('AFTER REDIS TS');
 
     console.log(redisTS);
-    checkSessionTimestamp(socket.twineID)
+    RedisHandler.checkSessionTimeStamp(socket.twineID)
       .then(data => {
         redisTS = data;
       });
@@ -137,14 +138,14 @@ export const handleConnection = async (socket: CustomSocket) => {
     // check sessionRc to determine if reconnect
     console.log(sessionRc);
     if (sessionRc) {
-      let subscribedRooms: SubscribedRooms = await redisSubscribedRooms(socket.twineID)
+      let subscribedRooms: SubscribedRooms = await RedisHandler.redisSubscribedRooms(socket.twineID)
 
       // re-subscribe to all rooms they were subscribed to before disconnect
       resubscribe(socket, subscribedRooms);
       const timeSinceLastTimestamp = (currentTimeStamp() - socket.twineTS);
 
       // executes short-term or long-term state recovery based on `timeSinceLastTimestamp`
-      if (timeSinceLastTimestamp <= SHORT_TERM_RECOVERY_TIME_MAX) { 
+      if (timeSinceLastTimestamp <= SHORT_TERM_RECOVERY_TIME_MAX) {
         console.log('short term state recovery branch executed')
         emitShortTermReconnectionStateRecovery(socket, socket.twineTS, subscribedRooms);
       } else if (timeSinceLastTimestamp <= LONG_TERM_RECOVERY_TIME_MAX) {
@@ -159,7 +160,7 @@ export const handleConnection = async (socket: CustomSocket) => {
     console.log('client joined room');
     socket.emit('roomJoined', `You have joined room: ${roomName}`);
     let sessionId = socket.twineID || '';
-    await addRoomToSession(sessionId, roomName);
+    await RedisHandler.addRoomToSession(sessionId, roomName);
   });
 
   // disconnect vs. disconnecting difference?
@@ -169,7 +170,7 @@ export const handleConnection = async (socket: CustomSocket) => {
 
   socket.on('updateSessionTS', (newTime) => {
     let session = socket.twineID || '';
-    setSessionTime(session);
+    RedisHandler.setSessionTime(session);
   });
 
 }

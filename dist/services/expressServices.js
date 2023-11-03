@@ -9,9 +9,17 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 };
 import { io } from '../index.js';
 import { createMessage } from "../db/dynamoService.js";
-import { storeMessageInSet } from '../db/redisService.js';
+import RedisHandler from '../db/redisService.js';
 import { currentTimeStamp } from '../utils/helpers.js';
-export const homeRoute = (req, res) => {
+;
+;
+// type DynamoCreateResponse = {
+//   status_code: number | undefined,
+//   room_id: string,
+//   time_created: number,
+//   payload: object
+// };
+export const homeRoute = (_, res) => {
     console.log("you've got mail!");
     res.send('Nice work');
 };
@@ -29,9 +37,8 @@ const publishToDynamo = (room_id, payload) => __awaiter(void 0, void 0, void 0, 
     }
 });
 const publishToRedis = (room, requestData, timestamp) => {
-    storeMessageInSet(room, requestData, timestamp);
+    RedisHandler.storeMessagesInSet(room, requestData, timestamp);
 };
-// will need to eventually strengthen this logic
 const validate = (data) => {
     let { room_id, payload } = data;
     if (Object.keys(data).length > 2) {
@@ -53,11 +60,12 @@ export const publish = (req, res) => __awaiter(void 0, void 0, void 0, function*
         yield publishToRedis(data.room_id, JSON.stringify(data), time);
         console.log("Data Payload Emitting", data.payload);
         data.payload["timestamp"] = time;
+        data.payload["room"] = data.room_id;
         io.to(data.room_id).emit("message", data.payload);
         res.status(201).send('ok');
     }
     catch (error) {
-        console.log(error); // later change this to logging? console.error?
+        console.log(error);
         res.status(400).send(error.message);
     }
 });

@@ -1,105 +1,76 @@
 import { currentTimeStamp } from "../utils/helpers.js";
 import { redis } from '../index.js';
+import { generateRandomStringPrefix, removeRandomStringPrefixs } from "./redisHelpers.js";
 import "dotenv/config";
 
-const generateRandomStringPrefix = (payload: string) => {
-  const charset = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
-  let result = "";
-
-  for (let i = 0; i < 5; i++) {
-    const randomIndex = Math.floor(Math.random() * charset.length);
-    result += charset[randomIndex];
-  };
-
-  return result + payload;
-};
-
-const removeRandomStringPrefixs = (arrayOfMessages: string[]) => {
-  return arrayOfMessages.map(message => message.slice(5));
-};
-
-export const storeMessageInSet = async (room: string, payload: string, timestamp: number) => {
-  let lengthOfSet = await redis.zcard(`${room}Set`);
-  let randomizedPayload = generateRandomStringPrefix(payload);
-
-  if (lengthOfSet >= 100) {
-    console.log("Set exceeds 100 messages, please try again later");
-    return;
-  } else {
-    await redis.zadd(`${room}Set`, timestamp, randomizedPayload);
-    console.log('Message stored in cache: ' + randomizedPayload);
-  }
+interface SubscribedRooms {
+  [key: string]: string;
 };
 
 interface SubscribedRoomMessages {
   [key: string]: string[];
 };
 
-// currently fetches ALL messages missed in subscribed rooms (no pagination)
-export const processSubscribedRooms = async (timestamp: number, room: string, result: SubscribedRoomMessages) => {
-  // idk why .zrange doesn't work
-  // https://redis.github.io/ioredis/classes/Redis.html#zrange
-  // await redis.zrange(`${room}Set`, timestamp, '+inf', 'BYSCORE', (error, array) => {
-  await redis.zrangebyscore(`${room}Set`, timestamp, '+inf', (error, array) => {
-    if (error) {
-      console.error('Error reading sorted set:', error);
+class RedisHandler {
+
+  public static async storeMessagesInSet(room: string, payload: string, timestamp: number) {
+    let lengthOfSet = await redis.zcard(`${room}Set`);
+    let randomizedPayload = generateRandomStringPrefix(payload);
+
+    if (lengthOfSet >= 100) {
+      console.log("Set exceeds 100 messages, please try again later");
+      return;
     } else {
-      let processedMessages = removeRandomStringPrefixs(array as string[]);
-      result[room] = processedMessages;
-    }
-  })
-};
-
-interface SubscribedRooms {
-  [key: string]: string;
-};
-
-// subscribed rooms is object with k: roomName v: joinTime
-export const redisMissedMessages = async (twineTS: number, subscribedRooms: SubscribedRooms) => {
-  let result = {};
-
-  // if twineTS > joinTime, then twineTS has been updated since the client joined the room
-  // if twineTS < joinTime, then twineTS default value never updated (client never received message)
-  for (let room in subscribedRooms) {
-    let joinTime = Number(subscribedRooms[room]);
-    if (twineTS > joinTime) {
-      console.log('twineTS is greater');
-      await processSubscribedRooms(twineTS + 1, room, result);
-    } else {
-      console.log('joinTime is greater');
-      await processSubscribedRooms(joinTime + 1, room, result);
+      await redis.zadd(`${room}Set`, timestamp, randomizedPayload);
     }
   }
-  return result;
-};
 
-export const redisSubscribedRooms = async (sessionID: string) => {
-  const subscribedRoomKeys = await redis.hgetall(`rooms:${sessionID}`);
-  return subscribedRoomKeys;
-};
+  private static async processSubscribedRooms(timestamp: number, room: string, result: SubscribedRoomMessages) {
+    await redis.zrangebyscore(`${room}Set`, timestamp, '+inf', (error, array) => {
+      if (error) {
+        console.error('Error reading sorted set:', error);
+      } else {
+        let processedMessages = removeRandomStringPrefixs(array as string[]);
+        result[room] = processedMessages;
+      }
+    })
+  }
 
-export const setSessionTime = async (sessionID: string) => {
-  const currentTime = currentTimeStamp();
-  await redis.set(sessionID, currentTime);
-};
+  public static async redisMissedMessages(twineTS: number, subscribedRooms: SubscribedRooms) {
+    let result = {};
+    for (let room in subscribedRooms) {
+      let joinTime = Number(subscribedRooms[room]);
+      if (twineTS > joinTime) {
+        await RedisHandler.processSubscribedRooms(twineTS + 1, room, result);
+      } else {
+        await RedisHandler.processSubscribedRooms(joinTime + 1, room, result);
+      }
+    }
+    return result;
+  }
 
-// sessionTimestamp must be converted back to number on retreival
-// because redis converts it to a string
-export const checkSessionTimestamp = async (sessionID: string) => {
-  console.log('checkSessionTimestamp executed');
-  let sessionTimestamp = await redis.get(sessionID);
-  console.log('sessionTimestamp: ', sessionTimestamp);
-  return Number(sessionTimestamp);
-};
+  public static async redisSubscribedRooms(sessionID: string) {
+    const subscribedRoomKeys = await redis.hgetall(`rooms:${sessionID}`);
+    return subscribedRoomKeys;
+  }
 
-// if the hash exists, replaced the field/value set in the hash with the new value
-// if the hash does not exist, create it and add the roomName/roomName k/v pair
-export const addRoomToSession = async (sessionID: string, roomName: string) => {
-  await redis.hset(`rooms:${sessionID}`, roomName, currentTimeStamp());
-};
+  public static async setSessionTime(sessionID: string) {
+    const currentTime = currentTimeStamp();
+    await redis.set(sessionID, currentTime);
+  }
 
-// hdel returns 1 if the field existed and was removed
-// hdel returns 0 if the field or hash does not exist
-export const removeRoomFromSession = async (sessionID: string, roomName: string) => {
-  await redis.hdel(`rooms:${sessionID}`, roomName);
-};
+  public static async checkSessionTimeStamp(sessionID: string) {
+    let sessionTimestamp = await redis.get(sessionID);
+    return Number(sessionTimestamp);
+  }
+
+  public static async addRoomToSession(sessionID: string, roomName: string) {
+    await redis.hset(`rooms:${sessionID}`, roomName, currentTimeStamp());
+  }
+
+  // public static async removeRoomFromSession(sessionID: string, roomName: string) {
+  //   await redis.hdel(`rooms:${sessionID}`, roomName);
+  // }
+}
+
+export default RedisHandler;

@@ -1,7 +1,7 @@
 import { Request, Response } from "express";
 import { io } from '../index.js';
 import { createMessage } from "../db/dynamoService.js";
-import { storeMessageInSet } from '../db/redisService.js';
+import RedisHandler from '../db/redisService.js';
 import { currentTimeStamp } from '../utils/helpers.js';
 
 interface messageObject {
@@ -46,17 +46,17 @@ const publishToDynamo = async (room_id: string, payload: object) => {
 };
 
 const publishToRedis = (room: string, requestData: string, timestamp: number) => {
-  storeMessageInSet(room, requestData, timestamp);
+  RedisHandler.storeMessagesInSet(room, requestData, timestamp);
 };
 
 const validate = (data: jsonData) => {
   let { room_id, payload } = data;
 
-  if(Object.keys(data).length > 2) {
+  if (Object.keys(data).length > 2) {
     throw Error('Malformed Request: Extra parameters were included in request.');
   } else if (!room_id || !payload) {
     throw Error('Malformed Request: One or more required parameters is missing');
-  } else if(room_id && (typeof payload !== 'object')) {
+  } else if (room_id && (typeof payload !== 'object')) {
     throw Error('Malformed Request: One or more parameter values is of an incorrect data type.');
   }
 };
@@ -75,7 +75,7 @@ export const publish = async (req: Request, res: Response) => {
     data.payload["timestamp"] = time;
     data.payload["room"] = data.room_id;
 
-    io.to(data.room_id).emit("message", data.payload); 
+    io.to(data.room_id).emit("message", data.payload);
     res.status(201).send('ok');
   } catch (error: any) {
     console.log(error);
