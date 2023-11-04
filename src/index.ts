@@ -12,9 +12,10 @@ import cron from 'node-cron';
 import cors from 'cors';
 import { serialize } from "cookie";
 
-const PORT = 3004;
+
+const PORT = process.env.ENV_PORT || 3003;
 const TWENTY_FOUR_HOURS = 24 * 60 * 60 * 1000;
-const redisEndpoints = ['micro-redis.xjdmww.clustercfg.usw1.cache.amazonaws.com:6379']; //remove this from source code
+const redisEndpoints = [process.env.CACHE_ENDPOINT || 'redis://localhost:6379'];
 const corsOptions = {
   origin: true,
   credentials: true,
