@@ -10,14 +10,16 @@ import CronJobHandler from "./db/redisCronJobs.js";
 import 'dotenv/config';
 import cron from 'node-cron';
 import cors from 'cors';
+import { serialize } from "cookie";
 
-const PORT = 3003;
+const PORT = 3004;
 const TWENTY_FOUR_HOURS = 24 * 60 * 60 * 1000;
 const redisEndpoints = ['micro-redis.xjdmww.clustercfg.usw1.cache.amazonaws.com:6379']; //remove this from source code
 const corsOptions = {
   origin: true,
   credentials: true,
 };
+
 const nodes = redisEndpoints.map(endpoint => {
   const [host, port] = endpoint.split(':');
   return { host, port: parseInt(port, 10) };
@@ -84,7 +86,7 @@ export const io = new Server<
     origin: '*',
     methods: ['GET', 'POST'],
     credentials: true,
-  },
+  }
 });
 
 // Adapter logic
@@ -98,30 +100,19 @@ io.on("connection", handleConnection);
 app.get('/', homeRoute);
 app.post('/api/twine', publish);
 
-app.get('/delete-cookie', (_, res) => {
-  res.cookie('twine', '', {
-    httpOnly: true,
-    secure: true,
-    sameSite: 'none',
-    expires: new Date(0) // Set to a past date
-  });
-  res.send('Cookie deleted');
-});
-
 // Frontend code now sends request to this route before establishing WebSocket connection
 app.get('/set-cookie', (req, res) => {
   const cookies = req.headers.cookie || '';
 
-  // Parse the cookies
   const cookiesObj = Object.fromEntries(cookies.split(';').map(cookie => {
     const [name, value] = cookie.trim().split('=');
     return [name, value];
   }));
 
-  if (!cookiesObj.twinert) {
+  if (!cookiesObj.twineid) {
     const sessionID = newUUID();
 
-    res.cookie('twinert', sessionID, {
+    res.cookie('twineid', sessionID, {
       httpOnly: true,
       secure: true,
       sameSite: 'none',
@@ -130,18 +121,9 @@ app.get('/set-cookie', (req, res) => {
 
     console.log('First cookie set ', sessionID);
     res.send('First cookie set');
-  } else if (!cookiesObj.twinerc) {
-    res.cookie('twinerc', 'y', {
-      httpOnly: true,
-      secure: true,
-      sameSite: 'none',
-      maxAge: TWENTY_FOUR_HOURS
-    });
-    console.log('RC cookie set');
-    res.send('RC cookie set');
   } else {
-    console.log('RC cookie already set');
-    res.send('RC cookie already set');
+    console.log('Cookie already set');
+    res.send('Cookie already set');
   }
 });
 
