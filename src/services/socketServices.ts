@@ -3,7 +3,6 @@ import RedisHandler from '../db/redisService.js';
 import { readPreviousMessagesByRoom } from '../db/dynamoService.js';
 import { currentTimeStamp } from "../utils/helpers.js";
 import { parse } from "cookie";
-import { Redis } from "ioredis";
 
 const SHORT_TERM_RECOVERY_TIME_MAX = 120000;
 const LONG_TERM_RECOVERY_TIME_MAX = 86400000;
