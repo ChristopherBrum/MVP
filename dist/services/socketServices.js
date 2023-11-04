@@ -77,52 +77,35 @@ const emitMessages = (socket, messages, room_id) => {
 // called when io.on(connect)
 // should always be a twineID and twineTS available at this point, whether reconnect or first time
 export const handleConnection = (socket) => __awaiter(void 0, void 0, void 0, function* () {
-    socket.on('stateRecovery', () => __awaiter(void 0, void 0, void 0, function* () {
+    socket.twineID = '';
+    if (socket.handshake.headers.cookie) {
         const cookiesData = socket.handshake.headers.cookie;
         const parsedCookies = parse(cookiesData);
-        let sessionId = parsedCookies.twinert;
-        let sessionRc = parsedCookies.twinerc || false;
-        if (sessionId) {
-            console.log('Twine Session: ', sessionId);
+        socket.twineID = parsedCookies.twineid;
+    }
+    if (socket.twineID) {
+        console.log('Twine ID: ', socket.twineID);
+    }
+    else {
+        console.log('No Twine ID');
+    }
+    socket.twineTS = yield RedisHandler.checkSessionTimeStamp(socket.twineID);
+    console.log('Twine TS: ', socket.twineTS);
+    if (socket.twineTS) {
+        // re-subscribe to all rooms they were subscribed to before disconnect
+        let subscribedRooms = yield RedisHandler.redisSubscribedRooms(socket.twineID);
+        resubscribe(socket, subscribedRooms);
+        const timeSinceLastTimestamp = (currentTimeStamp() - socket.twineTS);
+        // executes short-term or long-term state recovery based on `timeSinceLastTimestamp`
+        if (timeSinceLastTimestamp <= SHORT_TERM_RECOVERY_TIME_MAX) {
+            console.log('short term state recovery branch executed');
+            emitShortTermReconnectionStateRecovery(socket, socket.twineTS, subscribedRooms);
         }
-        else {
-            console.log('No session found');
+        else if (timeSinceLastTimestamp <= LONG_TERM_RECOVERY_TIME_MAX) {
+            console.log('long term state recovery branch executed');
+            emitLongTermReconnectionStateRecovery(socket, socket.twineTS, subscribedRooms);
         }
-        const currDate = new Date();
-        currDate.setHours(currDate.getHours() - 25);
-        const oldDate = currDate.getTime();
-        if (sessionRc) {
-            console.log('Reconnect Session');
-        }
-        ;
-        socket.twineID = sessionId || 'a';
-        let redisTS = yield RedisHandler.checkSessionTimeStamp(socket.twineID);
-        console.log('AFTER REDIS TS');
-        console.log(redisTS);
-        RedisHandler.checkSessionTimeStamp(socket.twineID)
-            .then(data => {
-            redisTS = data;
-        });
-        socket.twineTS = redisTS || oldDate;
-        console.log(redisTS);
-        // check sessionRc to determine if reconnect
-        console.log(sessionRc);
-        if (sessionRc) {
-            let subscribedRooms = yield RedisHandler.redisSubscribedRooms(socket.twineID);
-            // re-subscribe to all rooms they were subscribed to before disconnect
-            resubscribe(socket, subscribedRooms);
-            const timeSinceLastTimestamp = (currentTimeStamp() - socket.twineTS);
-            // executes short-term or long-term state recovery based on `timeSinceLastTimestamp`
-            if (timeSinceLastTimestamp <= SHORT_TERM_RECOVERY_TIME_MAX) {
-                console.log('short term state recovery branch executed');
-                emitShortTermReconnectionStateRecovery(socket, socket.twineTS, subscribedRooms);
-            }
-            else if (timeSinceLastTimestamp <= LONG_TERM_RECOVERY_TIME_MAX) {
-                console.log('long term state recovery branch executed');
-                emitLongTermReconnectionStateRecovery(socket, socket.twineTS, subscribedRooms);
-            }
-        }
-    }));
+    }
     socket.on('join', (roomName) => __awaiter(void 0, void 0, void 0, function* () {
         socket.join(roomName);
         console.log('client joined room');
