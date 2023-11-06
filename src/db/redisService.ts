@@ -56,7 +56,7 @@ class RedisHandler {
 
   public static async setSessionTime(sessionID: string) {
     const currentTime = currentTimeStamp();
-    await redis.set(sessionID, currentTime);
+    await redis.set(sessionID, currentTime, 'EX', 86400);
   }
 
   public static async checkSessionTimeStamp(sessionID: string) {

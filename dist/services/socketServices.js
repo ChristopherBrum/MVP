@@ -33,12 +33,9 @@ const parseRedisMessages = (messagesArr) => {
 };
 // rooms is now { roomA: joinTime, roomB: joinTime, etc }
 const emitShortTermReconnectionStateRecovery = (socket, timestamp, rooms) => __awaiter(void 0, void 0, void 0, function* () {
-    console.log('#### Redis Emit');
     let messagesObj = yield RedisHandler.redisMissedMessages(timestamp, rooms);
-    console.log("message object returned from redis", messagesObj);
     for (let room in messagesObj) {
         let messages = parseRedisMessages(messagesObj[room]);
-        console.log("Messages for each room returned from redis", messages);
         emitMessages(socket, messages, room);
     }
 });
@@ -52,16 +49,12 @@ const emitLongTermReconnectionStateRecovery = (socket, timestamp, rooms) => __aw
     let messages;
     for (let room in rooms) {
         let joinTime = Number(rooms[room]);
-        console.log('room', room);
         if (timestamp > joinTime) {
-            console.log('twineTS is greater');
             messages = (yield readPreviousMessagesByRoom(room, timestamp + 1));
         }
         else {
-            console.log('joinTime is greater');
             messages = (yield readPreviousMessagesByRoom(room, joinTime + 1));
         }
-        console.log('retrieved long-term messages', messages);
         let parsedMessages = parseDynamoMessages(messages);
         emitMessages(socket, parsedMessages, room);
     }
@@ -83,14 +76,7 @@ export const handleConnection = (socket) => __awaiter(void 0, void 0, void 0, fu
         const parsedCookies = parse(cookiesData);
         socket.twineID = parsedCookies.twineid;
     }
-    if (socket.twineID) {
-        console.log('Twine ID: ', socket.twineID);
-    }
-    else {
-        console.log('No Twine ID');
-    }
     socket.twineTS = yield RedisHandler.checkSessionTimeStamp(socket.twineID);
-    console.log('Twine TS: ', socket.twineTS);
     if (socket.twineTS) {
         // re-subscribe to all rooms they were subscribed to before disconnect
         let subscribedRooms = yield RedisHandler.redisSubscribedRooms(socket.twineID);
@@ -98,31 +84,23 @@ export const handleConnection = (socket) => __awaiter(void 0, void 0, void 0, fu
         const timeSinceLastTimestamp = (currentTimeStamp() - socket.twineTS);
         // executes short-term or long-term state recovery based on `timeSinceLastTimestamp`
         if (timeSinceLastTimestamp <= SHORT_TERM_RECOVERY_TIME_MAX) {
-            console.log('short term state recovery branch executed');
             emitShortTermReconnectionStateRecovery(socket, socket.twineTS, subscribedRooms);
         }
         else if (timeSinceLastTimestamp <= LONG_TERM_RECOVERY_TIME_MAX) {
-            console.log('long term state recovery branch executed');
             emitLongTermReconnectionStateRecovery(socket, socket.twineTS, subscribedRooms);
         }
     }
     socket.on('subscribe', (roomName) => __awaiter(void 0, void 0, void 0, function* () {
         socket.join(roomName);
-        console.log('client joined room');
         socket.emit('roomJoined', `You have joined room: ${roomName}`);
         let sessionId = socket.twineID || '';
         yield RedisHandler.addRoomToSession(sessionId, roomName);
     }));
     socket.on('unsubscribe', (roomName) => __awaiter(void 0, void 0, void 0, function* () {
         socket.leave(roomName);
-        console.log('client left room');
         socket.emit('roomLeft', `You have left room: ${roomName}`);
         let sessionId = socket.twineID || '';
         yield RedisHandler.removeRoomFromSession(sessionId, roomName);
-    }));
-    // disconnect vs. disconnecting difference?
-    socket.on('disconnect', () => __awaiter(void 0, void 0, void 0, function* () {
-        console.log('#### Disconnected');
     }));
     socket.on('updateSessionTS', (newTime) => {
         let session = socket.twineID || '';
