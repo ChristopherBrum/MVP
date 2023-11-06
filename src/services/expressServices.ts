@@ -1,7 +1,7 @@
 import { Request, Response } from "express";
 import { io } from '../index.js';
-import { createMessage } from "../db/dynamoService.js";
 import RedisHandler from '../db/redisService.js';
+import DynamoHandler from "../db/dynamoService.js";
 import { currentTimeStamp } from '../utils/helpers.js';
 import { jsonData } from "src/typings.js";
 
@@ -12,7 +12,7 @@ export const homeRoute = (_: Request, res: Response) => {
 
 const publishToDynamo = async (room_id: string, payload: object) => {
   try {
-    const dynamoResponse: any = await createMessage(
+    const dynamoResponse: any = await DynamoHandler.createMessage(
       room_id,
       JSON.stringify(payload)
     )
