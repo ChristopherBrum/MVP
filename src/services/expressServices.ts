@@ -5,17 +5,6 @@ import RedisHandler from '../db/redisService.js';
 import { currentTimeStamp } from '../utils/helpers.js';
 import { jsonData } from "src/typings.js";
 
-// interface messageObject {
-//   message: string;
-//   timestamp: number;
-//   room: string;
-// };
-
-// interface jsonData {
-//   room_id: string;
-//   payload: messageObject;
-// };
-
 export const homeRoute = (_: Request, res: Response) => {
   console.log("you've got mail!");
   res.send('Nice work');

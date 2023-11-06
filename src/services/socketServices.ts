@@ -14,24 +14,6 @@ import {
 const SHORT_TERM_RECOVERY_TIME_MAX = 120000;
 const LONG_TERM_RECOVERY_TIME_MAX = 86400000;
 
-// interface CustomSocket extends Socket { // any way to add to typings file?
-//   twineID?: string;
-//   twineTS?: number;
-//   twineRC?: boolean;
-// };
-
-// interface DynamoMessage {
-//   id: object;
-//   time_created: object;
-//   payload: string;
-// };
-
-// interface messageObject {
-//   message: string;
-//   timestamp: number;
-//   room: string;
-// };
-
 const resubscribe = (socket: CustomSocket, rooms: SubscribedRooms) => {
   const roomNames = Object.keys(rooms)
   for (let room of roomNames) {
@@ -39,14 +21,6 @@ const resubscribe = (socket: CustomSocket, rooms: SubscribedRooms) => {
     socket.emit('roomJoined', `You have joined room: ${room}`);
   }
 };
-
-// interface RedisMessage {
-//   [key: string]: string[];
-// };
-
-// interface SubscribedRooms {
-//   [key: string]: string;
-// };
 
 const parseRedisMessages = (messagesArr: string[]) => {
   return messagesArr.map(jsonString => {

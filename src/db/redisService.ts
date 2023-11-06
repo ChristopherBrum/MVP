@@ -4,14 +4,6 @@ import { generateRandomStringPrefix, removeRandomStringPrefixs } from "./redisHe
 import { SubscribedRooms, SubscribedRoomMessages } from "src/typings.js";
 import "dotenv/config";
 
-// interface SubscribedRooms {
-//   [key: string]: string;
-// };
-
-// interface SubscribedRoomMessages {
-//   [key: string]: string[];
-// };
-
 class RedisHandler {
 
   public static async storeMessagesInSet(room: string, payload: string, timestamp: number) {

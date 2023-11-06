@@ -39,35 +39,6 @@ app.use(express.json());
 
 const httpServer = createServer(app);
 
-// TypeScript types
-// interface messageObject {
-//   message: string;
-// };
-
-// interface ServerToClientEvents {
-//   noArg: () => void;
-//   basicEmit: (a: number, b: string, c: Buffer) => void;
-//   withAck: (d: string, callback: (e: number) => void) => void;
-// };
-
-// interface ClientToServerEvents {
-//   hello: () => void;
-//   message: (message: messageObject) => void;
-//   session: (message: SessionObject) => void;
-// };
-
-// interface InterServerEvents {
-//   ping: () => void;
-// };
-
-// interface SocketData {
-//   sessionId: string;
-// };
-
-// interface SessionObject {
-//   sessionId: string;
-// };
-
 // instantiate new WS server
 export const io = new Server<
   ServerToClientEvents,
