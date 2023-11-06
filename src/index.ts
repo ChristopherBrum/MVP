@@ -3,18 +3,17 @@ import { Server } from 'socket.io';
 import express from 'express';
 import { handleConnection } from './services/socketServices.js';
 import { homeRoute, publish } from './services/expressServices.js';
-import { newUUID } from './utils/helpers.js';
+import { setCookie } from './services/cookieServices.js';
+// import { newUUID } from './utils/helpers.js'; // cookie import
 import { Cluster } from "ioredis";
 import { createAdapter } from "@socket.io/redis-adapter";
 import CronJobHandler from "./db/redisCronJobs.js";
 import 'dotenv/config';
 import cron from 'node-cron';
 import cors from 'cors';
-import { serialize } from "cookie";
-
 
 const PORT = process.env.ENV_PORT || 3005;
-const TWENTY_FOUR_HOURS = 24 * 60 * 60 * 1000;
+// const TWENTY_FOUR_HOURS = 24 * 60 * 60 * 1000; // cookie const
 const redisEndpoints = [process.env.CACHE_ENDPOINT || 'redis://localhost:6379'];
 const corsOptions = {
   origin: true,
@@ -66,10 +65,7 @@ interface InterServerEvents {
 };
 
 interface SocketData {
-  name: string;
-  age: number;
   sessionId: string;
-  offset: Date;
 };
 
 interface SessionObject {
@@ -102,31 +98,32 @@ app.get('/', homeRoute);
 app.post('/api/twine', publish);
 
 // Frontend code now sends request to this route before establishing WebSocket connection
-app.get('/set-cookie', (req, res) => {
-  const cookies = req.headers.cookie || '';
+app.get('/set-cookie', setCookie);
+// app.get('/set-cookie', (req, res) => {
+//   const cookies = req.headers.cookie || '';
 
-  const cookiesObj = Object.fromEntries(cookies.split(';').map(cookie => {
-    const [name, value] = cookie.trim().split('=');
-    return [name, value];
-  }));
+//   const cookiesObj = Object.fromEntries(cookies.split(';').map(cookie => {
+//     const [name, value] = cookie.trim().split('=');
+//     return [name, value];
+//   }));
 
-  if (!cookiesObj.twineid) {
-    const sessionID = newUUID();
+//   if (!cookiesObj.twineid) {
+//     const sessionID = newUUID();
 
-    res.cookie('twineid', sessionID, {
-      httpOnly: true,
-      secure: true,
-      sameSite: 'none',
-      maxAge: TWENTY_FOUR_HOURS
-    });
+//     res.cookie('twineid', sessionID, {
+//       httpOnly: true,
+//       secure: true,
+//       sameSite: 'none',
+//       maxAge: TWENTY_FOUR_HOURS
+//     });
 
-    console.log('First cookie set ', sessionID);
-    res.send('First cookie set');
-  } else {
-    console.log('Cookie already set');
-    res.send('Cookie already set');
-  }
-});
+//     console.log('First cookie set ', sessionID);
+//     res.send('First cookie set');
+//   } else {
+//     console.log('Cookie already set');
+//     res.send('Cookie already set');
+//   }
+// });
 
 // cron job redis
 const cronSchedule = "*/3 * * * *"; // runs every 3 minutes
