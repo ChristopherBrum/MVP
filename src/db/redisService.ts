@@ -68,9 +68,9 @@ class RedisHandler {
     await redis.hset(`rooms:${sessionID}`, roomName, currentTimeStamp());
   }
 
-  // public static async removeRoomFromSession(sessionID: string, roomName: string) {
-  //   await redis.hdel(`rooms:${sessionID}`, roomName);
-  // }
+  public static async removeRoomFromSession(sessionID: string, roomName: string) {
+    await redis.hdel(`rooms:${sessionID}`, roomName);
+  }
 }
 
 export default RedisHandler;
