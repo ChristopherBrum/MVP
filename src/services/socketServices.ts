@@ -1,29 +1,36 @@
-import { Socket } from "socket.io";
+// import { Socket } from "socket.io";
 import RedisHandler from '../db/redisService.js';
 import { readPreviousMessagesByRoom } from '../db/dynamoService.js';
 import { currentTimeStamp } from "../utils/helpers.js";
 import { parse } from "cookie";
+import {
+  CustomSocket,
+  DynamoMessage,
+  messageObject,
+  RedisMessage,
+  SubscribedRooms
+} from "../typings.js"
 
 const SHORT_TERM_RECOVERY_TIME_MAX = 120000;
 const LONG_TERM_RECOVERY_TIME_MAX = 86400000;
 
-interface CustomSocket extends Socket {
-  twineID?: string;
-  twineTS?: number;
-  twineRC?: boolean;
-};
+// interface CustomSocket extends Socket { // any way to add to typings file?
+//   twineID?: string;
+//   twineTS?: number;
+//   twineRC?: boolean;
+// };
 
-interface DynamoMessage {
-  id: object;
-  time_created: object;
-  payload: string;
-};
+// interface DynamoMessage {
+//   id: object;
+//   time_created: object;
+//   payload: string;
+// };
 
-interface messageObject {
-  message: string;
-  timestamp: number;
-  room: string;
-};
+// interface messageObject {
+//   message: string;
+//   timestamp: number;
+//   room: string;
+// };
 
 const resubscribe = (socket: CustomSocket, rooms: SubscribedRooms) => {
   const roomNames = Object.keys(rooms)
@@ -33,13 +40,13 @@ const resubscribe = (socket: CustomSocket, rooms: SubscribedRooms) => {
   }
 };
 
-interface RedisMessage {
-  [key: string]: string[];
-};
+// interface RedisMessage {
+//   [key: string]: string[];
+// };
 
-interface SubscribedRooms {
-  [key: string]: string;
-};
+// interface SubscribedRooms {
+//   [key: string]: string;
+// };
 
 const parseRedisMessages = (messagesArr: string[]) => {
   return messagesArr.map(jsonString => {

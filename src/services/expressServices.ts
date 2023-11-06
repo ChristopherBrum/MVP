@@ -3,23 +3,17 @@ import { io } from '../index.js';
 import { createMessage } from "../db/dynamoService.js";
 import RedisHandler from '../db/redisService.js';
 import { currentTimeStamp } from '../utils/helpers.js';
+import { jsonData } from "src/typings.js";
 
-interface messageObject {
-  message: string;
-  timestamp: number;
-  room: string;
-};
+// interface messageObject {
+//   message: string;
+//   timestamp: number;
+//   room: string;
+// };
 
-interface jsonData {
-  room_id: string;
-  payload: messageObject;
-};
-
-// type DynamoCreateResponse = {
-//   status_code: number | undefined,
-//   room_id: string,
-//   time_created: number,
-//   payload: object
+// interface jsonData {
+//   room_id: string;
+//   payload: messageObject;
 // };
 
 export const homeRoute = (_: Request, res: Response) => {
@@ -32,7 +26,7 @@ const publishToDynamo = async (room_id: string, payload: object) => {
     const dynamoResponse: any = await createMessage(
       room_id,
       JSON.stringify(payload)
-    ) //as DynamoCreateResponse;
+    )
 
     if (!dynamoResponse.status_code) {
       throw Error('An error occured while trying to publish your message.');

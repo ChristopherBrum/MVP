@@ -6,6 +6,12 @@ import { homeRoute, publish } from './services/expressServices.js';
 import { setCookie } from './services/cookieServices.js';
 import { Cluster } from "ioredis";
 import { createAdapter } from "@socket.io/redis-adapter";
+import {
+  ServerToClientEvents,
+  ClientToServerEvents,
+  InterServerEvents,
+  SocketData
+} from "./typings.js"
 import CronJobHandler from "./db/redisCronJobs.js";
 import 'dotenv/config';
 import cron from 'node-cron';
@@ -33,42 +39,34 @@ app.use(express.json());
 
 const httpServer = createServer(app);
 
-declare module 'express-session' {
-  interface SessionData {
-    twineID: string;
-    twineRC: boolean;
-    twineTS: number;
-  }
-};
-
 // TypeScript types
-interface messageObject {
-  message: string;
-};
+// interface messageObject {
+//   message: string;
+// };
 
-interface ServerToClientEvents {
-  noArg: () => void;
-  basicEmit: (a: number, b: string, c: Buffer) => void;
-  withAck: (d: string, callback: (e: number) => void) => void;
-};
+// interface ServerToClientEvents {
+//   noArg: () => void;
+//   basicEmit: (a: number, b: string, c: Buffer) => void;
+//   withAck: (d: string, callback: (e: number) => void) => void;
+// };
 
-interface ClientToServerEvents {
-  hello: () => void;
-  message: (message: messageObject) => void;
-  session: (message: SessionObject) => void;
-};
+// interface ClientToServerEvents {
+//   hello: () => void;
+//   message: (message: messageObject) => void;
+//   session: (message: SessionObject) => void;
+// };
 
-interface InterServerEvents {
-  ping: () => void;
-};
+// interface InterServerEvents {
+//   ping: () => void;
+// };
 
-interface SocketData {
-  sessionId: string;
-};
+// interface SocketData {
+//   sessionId: string;
+// };
 
-interface SessionObject {
-  sessionId: string;
-};
+// interface SessionObject {
+//   sessionId: string;
+// };
 
 // instantiate new WS server
 export const io = new Server<
