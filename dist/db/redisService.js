@@ -78,5 +78,10 @@ class RedisHandler {
             yield redis.hset(`rooms:${sessionID}`, roomName, currentTimeStamp());
         });
     }
+    static removeRoomFromSession(sessionID, roomName) {
+        return __awaiter(this, void 0, void 0, function* () {
+            yield redis.hdel(`rooms:${sessionID}`, roomName);
+        });
+    }
 }
 export default RedisHandler;

@@ -10,8 +10,7 @@ import CronJobHandler from "./db/redisCronJobs.js";
 import 'dotenv/config';
 import cron from 'node-cron';
 import cors from 'cors';
-
-const PORT = process.env.ENV_PORT || 3003;
+const PORT = process.env.ENV_PORT || 3005;
 const TWENTY_FOUR_HOURS = 24 * 60 * 60 * 1000;
 const redisEndpoints = [process.env.CACHE_ENDPOINT || 'redis://localhost:6379'];
 const corsOptions = {

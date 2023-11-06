@@ -106,12 +106,19 @@ export const handleConnection = (socket) => __awaiter(void 0, void 0, void 0, fu
             emitLongTermReconnectionStateRecovery(socket, socket.twineTS, subscribedRooms);
         }
     }
-    socket.on('join', (roomName) => __awaiter(void 0, void 0, void 0, function* () {
+    socket.on('subscribe', (roomName) => __awaiter(void 0, void 0, void 0, function* () {
         socket.join(roomName);
         console.log('client joined room');
         socket.emit('roomJoined', `You have joined room: ${roomName}`);
         let sessionId = socket.twineID || '';
         yield RedisHandler.addRoomToSession(sessionId, roomName);
+    }));
+    socket.on('unsubscribe', (roomName) => __awaiter(void 0, void 0, void 0, function* () {
+        socket.leave(roomName);
+        console.log('client left room');
+        socket.emit('roomLeft', `You have left room: ${roomName}`);
+        let sessionId = socket.twineID || '';
+        yield RedisHandler.removeRoomFromSession(sessionId, roomName);
     }));
     // disconnect vs. disconnecting difference?
     socket.on('disconnect', () => __awaiter(void 0, void 0, void 0, function* () {

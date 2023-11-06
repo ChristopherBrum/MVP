@@ -13,7 +13,7 @@ import cors from 'cors';
 import { serialize } from "cookie";
 
 
-const PORT = process.env.ENV_PORT || 3003;
+const PORT = process.env.ENV_PORT || 3005;
 const TWENTY_FOUR_HOURS = 24 * 60 * 60 * 1000;
 const redisEndpoints = [process.env.CACHE_ENDPOINT || 'redis://localhost:6379'];
 const corsOptions = {

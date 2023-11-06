@@ -134,12 +134,20 @@ export const handleConnection = async (socket: CustomSocket) => {
     }
   }
 
-  socket.on('join', async (roomName) => {
+  socket.on('subscribe', async (roomName) => {
     socket.join(roomName);
     console.log('client joined room');
     socket.emit('roomJoined', `You have joined room: ${roomName}`);
     let sessionId = socket.twineID || '';
     await RedisHandler.addRoomToSession(sessionId, roomName);
+  });
+
+  socket.on('unsubscribe', async (roomName) => {
+    socket.leave(roomName);
+    console.log('client left room');
+    socket.emit('roomLeft', `You have left room: ${roomName}`);
+    let sessionId = socket.twineID || '';
+    await RedisHandler.removeRoomFromSession(sessionId, roomName);
   });
 
   // disconnect vs. disconnecting difference?
