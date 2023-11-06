@@ -1,7 +1,7 @@
 import { Request, Response } from "express";
 import { io } from '../index.js';
-import { createMessage } from "../db/dynamoService.js";
 import RedisHandler from '../db/redisService.js';
+import DynamoHandler from "../db/dynamoService.js";
 import { currentTimeStamp } from '../utils/helpers.js';
 
 interface messageObject {
@@ -15,13 +15,6 @@ interface jsonData {
   payload: messageObject;
 };
 
-// type DynamoCreateResponse = {
-//   status_code: number | undefined,
-//   room_id: string,
-//   time_created: number,
-//   payload: object
-// };
-
 export const homeRoute = (_: Request, res: Response) => {
   console.log("you've got mail!");
   res.send('Nice work');
@@ -29,10 +22,10 @@ export const homeRoute = (_: Request, res: Response) => {
 
 const publishToDynamo = async (room_id: string, payload: object) => {
   try {
-    const dynamoResponse: any = await createMessage(
+    const dynamoResponse: any = await DynamoHandler.createMessage(
       room_id,
       JSON.stringify(payload)
-    ) //as DynamoCreateResponse;
+    )
 
     if (!dynamoResponse.status_code) {
       throw Error('An error occured while trying to publish your message.');

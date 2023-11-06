@@ -1,6 +1,6 @@
 import { Socket } from "socket.io";
 import RedisHandler from '../db/redisService.js';
-import { readPreviousMessagesByRoom } from '../db/dynamoService.js';
+import DynamoHandler from "../db/dynamoService.js";
 import { currentTimeStamp } from "../utils/helpers.js";
 import { parse } from "cookie";
 
@@ -76,10 +76,10 @@ const emitLongTermReconnectionStateRecovery = async (socket: CustomSocket, times
     console.log('room', room)
     if (timestamp > joinTime) {
       console.log('twineTS is greater')
-      messages = await readPreviousMessagesByRoom(room, timestamp + 1) as DynamoMessage[];
+      messages = await DynamoHandler.readPreviousMessagesByRoom(room, timestamp + 1) as DynamoMessage[];
     } else {
       console.log('joinTime is greater')
-      messages = await readPreviousMessagesByRoom(room, joinTime + 1) as DynamoMessage[];
+      messages = await DynamoHandler.readPreviousMessagesByRoom(room, joinTime + 1) as DynamoMessage[];
     }
     console.log('retrieved long-term messages', messages)
     let parsedMessages = parseDynamoMessages(messages);
