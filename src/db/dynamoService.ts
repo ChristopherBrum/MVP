@@ -15,13 +15,11 @@ const clientConfig: DynamoDBClientConfig = { credentials: fromEnv() };
 const client = new DynamoDBClient(clientConfig);
 const docClient = DynamoDBDocumentClient.from(client);
 const TableName = 'rooms';
-// const KeyConditionExpression = '#id = :id AND #time_created > :last_timestamp';
 
 class DynamoHandler {  
   public static async createMessage(room_id: string, message: string) {
     const time_created = currentTimeStamp();
     const command = new PutCommand({
-      // TableName: "rooms",
       TableName,
       Item: {
         id: room_id,
@@ -56,7 +54,6 @@ class DynamoHandler {
     while (totalItems < MAX_RETURN) {
       const params: any = {
         TableName,
-        // KeyConditionExpression,
         KeyConditionExpression: '#id = :id AND #time_created > :last_timestamp',
         ExpressionAttributeNames: {
           "#id": "id",
