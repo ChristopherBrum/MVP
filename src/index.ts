@@ -4,7 +4,6 @@ import express from 'express';
 import { handleConnection } from './services/socketServices.js';
 import { homeRoute, publish } from './services/expressServices.js';
 import { setCookie } from './services/cookieServices.js';
-// import { newUUID } from './utils/helpers.js'; // cookie import
 import { Cluster } from "ioredis";
 import { createAdapter } from "@socket.io/redis-adapter";
 import CronJobHandler from "./db/redisCronJobs.js";
@@ -13,7 +12,6 @@ import cron from 'node-cron';
 import cors from 'cors';
 
 const PORT = process.env.ENV_PORT || 3005;
-// const TWENTY_FOUR_HOURS = 24 * 60 * 60 * 1000; // cookie const
 const redisEndpoints = [process.env.CACHE_ENDPOINT || 'redis://localhost:6379'];
 const corsOptions = {
   origin: true,
