@@ -11,13 +11,14 @@ import { io } from '../index.js';
 import { createMessage } from "../db/dynamoService.js";
 import RedisHandler from '../db/redisService.js';
 import { currentTimeStamp } from '../utils/helpers.js';
-;
-;
-// type DynamoCreateResponse = {
-//   status_code: number | undefined,
-//   room_id: string,
-//   time_created: number,
-//   payload: object
+// interface messageObject {
+//   message: string;
+//   timestamp: number;
+//   room: string;
+// };
+// interface jsonData {
+//   room_id: string;
+//   payload: messageObject;
 // };
 export const homeRoute = (_, res) => {
     console.log("you've got mail!");
@@ -25,7 +26,7 @@ export const homeRoute = (_, res) => {
 };
 const publishToDynamo = (room_id, payload) => __awaiter(void 0, void 0, void 0, function* () {
     try {
-        const dynamoResponse = yield createMessage(room_id, JSON.stringify(payload)); //as DynamoCreateResponse;
+        const dynamoResponse = yield createMessage(room_id, JSON.stringify(payload));
         if (!dynamoResponse.status_code) {
             throw Error('An error occured while trying to publish your message.');
         }

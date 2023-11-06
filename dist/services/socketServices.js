@@ -7,15 +7,28 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         step((generator = generator.apply(thisArg, _arguments || [])).next());
     });
 };
+// import { Socket } from "socket.io";
 import RedisHandler from '../db/redisService.js';
 import { readPreviousMessagesByRoom } from '../db/dynamoService.js';
 import { currentTimeStamp } from "../utils/helpers.js";
 import { parse } from "cookie";
 const SHORT_TERM_RECOVERY_TIME_MAX = 120000;
 const LONG_TERM_RECOVERY_TIME_MAX = 86400000;
-;
-;
-;
+// interface CustomSocket extends Socket { // any way to add to typings file?
+//   twineID?: string;
+//   twineTS?: number;
+//   twineRC?: boolean;
+// };
+// interface DynamoMessage {
+//   id: object;
+//   time_created: object;
+//   payload: string;
+// };
+// interface messageObject {
+//   message: string;
+//   timestamp: number;
+//   room: string;
+// };
 const resubscribe = (socket, rooms) => {
     const roomNames = Object.keys(rooms);
     for (let room of roomNames) {
@@ -23,8 +36,12 @@ const resubscribe = (socket, rooms) => {
         socket.emit('roomJoined', `You have joined room: ${room}`);
     }
 };
-;
-;
+// interface RedisMessage {
+//   [key: string]: string[];
+// };
+// interface SubscribedRooms {
+//   [key: string]: string;
+// };
 const parseRedisMessages = (messagesArr) => {
     return messagesArr.map(jsonString => {
         let jsonObj = JSON.parse(jsonString);
