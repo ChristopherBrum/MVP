@@ -64,7 +64,7 @@ class RedisHandler {
     static setSessionTime(sessionID) {
         return __awaiter(this, void 0, void 0, function* () {
             const currentTime = currentTimeStamp();
-            yield redis.set(sessionID, currentTime);
+            yield redis.set(sessionID, currentTime, 'EX', 86400);
         });
     }
     static checkSessionTimeStamp(sessionID) {
