@@ -3,6 +3,7 @@ import { io } from '../index.js';
 import RedisHandler from '../db/redisService.js';
 import DynamoHandler from "../db/dynamoService.js";
 import { currentTimeStamp } from '../utils/helpers.js';
+import { validateApiKey } from '../utils/auth.js';
 import { jsonData } from "src/typings.js";
 
 export const homeRoute = (_: Request, res: Response) => {
@@ -46,10 +47,12 @@ const validate = (data: jsonData) => {
 
 export const publish = async (req: Request, res: Response) => {
   const data: jsonData = req.body;
+  const authValue = req.headers['authorization'] || "";
   const time = currentTimeStamp();
 
   try {
     validate(data);
+    await validateApiKey(authValue);
 
     await publishToDynamo(data.room_id, data.payload);
     await publishToRedis(data.room_id, JSON.stringify(data), time);
