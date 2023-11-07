@@ -7,7 +7,7 @@ import { validateApiKey } from '../utils/auth.js';
 import { jsonData } from "src/typings.js";
 
 export const homeRoute = (_: Request, res: Response) => {
-  console.log("you've got mail!");
+  console.log("Connected to twine server");
   res.send('Nice work');
 };
 

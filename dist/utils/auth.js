@@ -11,7 +11,7 @@ import { SecretsManagerClient, GetSecretValueCommand, } from "@aws-sdk/client-se
 const grabApiKey = () => __awaiter(void 0, void 0, void 0, function* () {
     const secret_name = "TwineAPI";
     const client = new SecretsManagerClient({
-        region: "us-west-1",
+        region: process.env.REGION || "us-west-1",
     });
     let response;
     try {

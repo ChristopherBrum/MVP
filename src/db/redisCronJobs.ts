@@ -5,7 +5,6 @@ class CronJobHandler {
     console.log("Cron Job executed");
 
     let allSortedSets = await CronJobHandler.findSortedSetsInCluster();
-    console.log(allSortedSets);
 
     allSortedSets.forEach((set: string) => {
       const setStream = redis.zscanStream(set);

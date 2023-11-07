@@ -13,7 +13,6 @@ class CronJobHandler {
         return __awaiter(this, void 0, void 0, function* () {
             console.log("Cron Job executed");
             let allSortedSets = yield CronJobHandler.findSortedSetsInCluster();
-            console.log(allSortedSets);
             allSortedSets.forEach((set) => {
                 const setStream = redis.zscanStream(set);
                 setStream.on("data", (allMessages) => {

@@ -7,7 +7,7 @@ const grabApiKey = async () => {
   const secret_name = "TwineAPI";
 
   const client = new SecretsManagerClient({
-    region: "us-west-1",
+    region: process.env.REGION || "us-west-1",
   });
 
   let response;
