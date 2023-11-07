@@ -8,24 +8,19 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 import { io } from '../index.js';
-import { createMessage } from "../db/dynamoService.js";
 import RedisHandler from '../db/redisService.js';
+import DynamoHandler from "../db/dynamoService.js";
 import { currentTimeStamp } from '../utils/helpers.js';
+import { validateApiKey } from '../utils/auth.js';
 ;
 ;
-// type DynamoCreateResponse = {
-//   status_code: number | undefined,
-//   room_id: string,
-//   time_created: number,
-//   payload: object
-// };
 export const homeRoute = (_, res) => {
     console.log("you've got mail!");
     res.send('Nice work');
 };
 const publishToDynamo = (room_id, payload) => __awaiter(void 0, void 0, void 0, function* () {
     try {
-        const dynamoResponse = yield createMessage(room_id, JSON.stringify(payload)); //as DynamoCreateResponse;
+        const dynamoResponse = yield DynamoHandler.createMessage(room_id, JSON.stringify(payload));
         if (!dynamoResponse.status_code) {
             throw Error('An error occured while trying to publish your message.');
         }
@@ -53,9 +48,11 @@ const validate = (data) => {
 };
 export const publish = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const data = req.body;
+    const authValue = req.headers['authorization'] || "";
     const time = currentTimeStamp();
     try {
         validate(data);
+        yield validateApiKey(authValue);
         yield publishToDynamo(data.room_id, data.payload);
         yield publishToRedis(data.room_id, JSON.stringify(data), time);
         console.log("Data Payload Emitting", data.payload);

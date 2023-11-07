@@ -8,7 +8,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 import RedisHandler from '../db/redisService.js';
-import { readPreviousMessagesByRoom } from '../db/dynamoService.js';
+import DynamoHandler from "../db/dynamoService.js";
 import { currentTimeStamp } from "../utils/helpers.js";
 import { parse } from "cookie";
 const SHORT_TERM_RECOVERY_TIME_MAX = 120000;
@@ -50,10 +50,12 @@ const emitLongTermReconnectionStateRecovery = (socket, timestamp, rooms) => __aw
     for (let room in rooms) {
         let joinTime = Number(rooms[room]);
         if (timestamp > joinTime) {
-            messages = (yield readPreviousMessagesByRoom(room, timestamp + 1));
+            console.log('twineTS is greater');
+            messages = (yield DynamoHandler.readPreviousMessagesByRoom(room, timestamp + 1));
         }
         else {
-            messages = (yield readPreviousMessagesByRoom(room, joinTime + 1));
+            console.log('joinTime is greater');
+            messages = (yield DynamoHandler.readPreviousMessagesByRoom(room, joinTime + 1));
         }
         let parsedMessages = parseDynamoMessages(messages);
         emitMessages(socket, parsedMessages, room);

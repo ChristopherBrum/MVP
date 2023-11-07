@@ -16,75 +16,83 @@ const clientConfig = { credentials: fromEnv() };
 const client = new DynamoDBClient(clientConfig);
 const docClient = DynamoDBDocumentClient.from(client);
 const TableName = 'rooms';
-const KeyConditionExpression = '#id = :id AND #time_created > :last_timestamp';
-const LimitPerQuery = 100; // Adjust this value based on your needs
-export const createMessage = (room_id, message) => __awaiter(void 0, void 0, void 0, function* () {
-    const time_created = currentTimeStamp();
-    const command = new PutCommand({
-        TableName: "rooms",
-        Item: {
-            id: room_id,
-            time_created,
-            payload: message
-        },
-    });
-    try {
-        const response = yield docClient.send(command);
-        return {
-            status_code: response['$metadata']['httpStatusCode'],
-            room_id,
-            time_created,
-            payload: {
-                message
+class DynamoHandler {
+    static createMessage(room_id, message) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const time_created = currentTimeStamp();
+            const command = new PutCommand({
+                TableName,
+                Item: {
+                    id: room_id,
+                    time_created,
+                    payload: message
+                },
+            });
+            try {
+                const response = yield docClient.send(command);
+                return {
+                    status_code: response['$metadata']['httpStatusCode'],
+                    room_id,
+                    time_created,
+                    payload: {
+                        message
+                    }
+                };
             }
-        };
+            catch (error) {
+                return error;
+            }
+        });
     }
-    catch (error) {
-        return error;
+    ;
+    static readPreviousMessagesByRoom(room_id, last_timestamp) {
+        return __awaiter(this, void 0, void 0, function* () {
+            let lastEvaluatedKey = undefined;
+            let responseItems = [];
+            let totalItems = 0;
+            const LimitPerQuery = 100;
+            const MAX_RETURN = 1000;
+            while (totalItems < MAX_RETURN) {
+                const params = {
+                    TableName,
+                    KeyConditionExpression: '#id = :id AND #time_created > :last_timestamp',
+                    ExpressionAttributeNames: {
+                        "#id": "id",
+                        '#time_created': 'time_created'
+                    },
+                    ExpressionAttributeValues: {
+                        ":id": { S: room_id },
+                        ":last_timestamp": { N: last_timestamp.toString() }
+                    },
+                    Limit: LimitPerQuery,
+                    ExclusiveStartKey: lastEvaluatedKey,
+                };
+                const command = new QueryCommand(params);
+                try {
+                    const { Items, LastEvaluatedKey } = yield client.send(command);
+                    if (Items) {
+                        totalItems += Items.length;
+                        (Items || []).forEach((item) => {
+                            responseItems.push(unmarshall(item));
+                        });
+                    }
+                    if (totalItems >= MAX_RETURN || !LastEvaluatedKey) {
+                        break;
+                    }
+                    if (LastEvaluatedKey) {
+                        lastEvaluatedKey = LastEvaluatedKey;
+                    }
+                }
+                catch (error) {
+                    console.log('Error querying DynamoDB:', error);
+                    return error;
+                }
+            }
+            return responseItems.length > MAX_RETURN
+                ? responseItems.slice(-MAX_RETURN)
+                : responseItems;
+        });
     }
-});
-export const readPreviousMessagesByRoom = (room_id, last_timestamp) => __awaiter(void 0, void 0, void 0, function* () {
-    let lastEvaluatedKey = undefined;
-    let responseItems = [];
-    let totalItems = 0;
-    const MAX_RETURN = 1000;
-    while (totalItems < MAX_RETURN) {
-        const params = {
-            TableName,
-            KeyConditionExpression,
-            ExpressionAttributeNames: {
-                "#id": "id",
-                '#time_created': 'time_created'
-            },
-            ExpressionAttributeValues: {
-                ":id": { S: room_id },
-                ":last_timestamp": { N: last_timestamp.toString() }
-            },
-            Limit: LimitPerQuery,
-            ExclusiveStartKey: lastEvaluatedKey,
-        };
-        const command = new QueryCommand(params);
-        try {
-            const { Items, LastEvaluatedKey } = yield client.send(command);
-            if (Items) {
-                totalItems += Items.length;
-                (Items || []).forEach((item) => {
-                    responseItems.push(unmarshall(item));
-                });
-            }
-            if (totalItems >= MAX_RETURN || !LastEvaluatedKey) {
-                break;
-            }
-            if (LastEvaluatedKey) {
-                lastEvaluatedKey = LastEvaluatedKey;
-            }
-        }
-        catch (error) {
-            console.log('Error querying DynamoDB:', error);
-            return error;
-        }
-    }
-    return responseItems.length > MAX_RETURN
-        ? responseItems.slice(-MAX_RETURN)
-        : responseItems;
-});
+    ;
+}
+export default DynamoHandler;
