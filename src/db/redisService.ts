@@ -1,15 +1,8 @@
 import { currentTimeStamp } from "../utils/helpers.js";
 import { redis } from '../index.js';
 import { generateRandomStringPrefix, removeRandomStringPrefixs } from "./redisHelpers.js";
+import { SubscribedRooms, SubscribedRoomMessages } from "src/typings.js";
 import "dotenv/config";
-
-interface SubscribedRooms {
-  [key: string]: string;
-};
-
-interface SubscribedRoomMessages {
-  [key: string]: string[];
-};
 
 class RedisHandler {
 
