@@ -12,15 +12,15 @@ import RedisHandler from '../db/redisService.js';
 import DynamoHandler from "../db/dynamoService.js";
 import { currentTimeStamp } from '../utils/helpers.js';
 import { validateApiKey } from '../utils/auth.js';
-;
-;
+
 export const homeRoute = (_, res) => {
     console.log("you've got mail!");
     res.send('Nice work');
 };
 const publishToDynamo = (room_id, payload) => __awaiter(void 0, void 0, void 0, function* () {
     try {
-        const dynamoResponse = yield DynamoHandler.createMessage(room_id, JSON.stringify(payload));
+        const dynamoResponse = yield createMessage(room_id, JSON.stringify(payload));
+
         if (!dynamoResponse.status_code) {
             throw Error('An error occured while trying to publish your message.');
         }

@@ -11,8 +11,12 @@ import { currentTimeStamp } from "../utils/helpers.js";
 import { redis } from '../index.js';
 import { generateRandomStringPrefix, removeRandomStringPrefixs } from "./redisHelpers.js";
 import "dotenv/config";
-;
-;
+// interface SubscribedRooms {
+//   [key: string]: string;
+// };
+// interface SubscribedRoomMessages {
+//   [key: string]: string[];
+// };
 class RedisHandler {
     static storeMessagesInSet(room, payload, timestamp) {
         return __awaiter(this, void 0, void 0, function* () {

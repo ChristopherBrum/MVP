@@ -4,17 +4,7 @@ import RedisHandler from '../db/redisService.js';
 import DynamoHandler from "../db/dynamoService.js";
 import { currentTimeStamp } from '../utils/helpers.js';
 import { validateApiKey } from '../utils/auth.js';
-
-interface messageObject {
-  message: string;
-  timestamp: number;
-  room: string;
-};
-
-interface jsonData {
-  room_id: string;
-  payload: messageObject;
-};
+import { jsonData } from "src/typings.js";
 
 export const homeRoute = (_: Request, res: Response) => {
   console.log("you've got mail!");
