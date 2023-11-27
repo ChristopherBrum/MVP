@@ -9,11 +9,11 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 };
 import { DynamoDBClient, QueryCommand } from "@aws-sdk/client-dynamodb";
 import { PutCommand, DynamoDBDocumentClient } from "@aws-sdk/lib-dynamodb";
-import { fromEnv } from "@aws-sdk/credential-providers";
 import { unmarshall } from "@aws-sdk/util-dynamodb";
 import { currentTimeStamp } from "../utils/helpers.js";
-const clientConfig = { credentials: fromEnv() };
-const client = new DynamoDBClient(clientConfig);
+const client = new DynamoDBClient({
+    region: process.env.REGION,
+});
 const docClient = DynamoDBDocumentClient.from(client);
 const TableName = 'rooms';
 class DynamoHandler {

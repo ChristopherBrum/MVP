@@ -4,24 +4,25 @@ import express from 'express';
 import { handleConnection } from './services/socketServices.js';
 import { homeRoute, publish } from './services/expressServices.js';
 import { setCookie } from './services/cookieServices.js';
-import { Cluster } from "ioredis";
+import { Redis } from "ioredis";
 import { createAdapter } from "@socket.io/redis-adapter";
 import CronJobHandler from "./db/redisCronJobs.js";
 import 'dotenv/config';
 import cron from 'node-cron';
 import cors from 'cors';
 const PORT = process.env.ENV_PORT || 3005;
-const redisEndpoints = [process.env.CACHE_ENDPOINT || 'redis://localhost:6379'];
+const redisEndpoint = process.env.CACHE_ENDPOINT || 'redis://localhost:6379';
 const corsOptions = {
     origin: true,
     credentials: true,
 };
-const nodes = redisEndpoints.map(endpoint => {
-    const [host, port] = endpoint.split(':');
-    return { host, port: parseInt(port, 10) };
+export const redis = new Redis(redisEndpoint);
+redis.on('connect', () => {
+    console.log('Connected to Redis');
 });
-export const redis = new Cluster(nodes); // Use Cluster to connect to Redis
-console.log('Connected to Redis');
+redis.on('error', (err) => {
+    console.error('Error connecting to Redis', err);
+});
 const app = express();
 app.use(cors(corsOptions));
 app.set('trust proxy', 1);

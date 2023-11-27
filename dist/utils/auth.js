@@ -27,9 +27,7 @@ const grabApiKey = () => __awaiter(void 0, void 0, void 0, function* () {
     return secret;
 });
 export const validateApiKey = (authValue) => __awaiter(void 0, void 0, void 0, function* () {
-    let validApiObject = yield grabApiKey();
-    let parsedObject = JSON.parse(validApiObject);
-    let validApiKey = parsedObject.API;
+    let validApiKey = yield grabApiKey();
     if (authValue !== validApiKey) {
         throw Error('Invalid API Key.');
     }

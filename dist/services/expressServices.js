@@ -13,8 +13,7 @@ import DynamoHandler from "../db/dynamoService.js";
 import { currentTimeStamp } from '../utils/helpers.js';
 import { validateApiKey } from '../utils/auth.js';
 export const homeRoute = (_, res) => {
-    console.log("Connected to twine server");
-    res.send('Nice work');
+    res.status(201).send('ok');
 };
 const publishToDynamo = (room_id, payload) => __awaiter(void 0, void 0, void 0, function* () {
     try {

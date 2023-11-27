@@ -28,9 +28,7 @@ const grabApiKey = async () => {
 }
 
 export const validateApiKey = async (authValue: string) => {
-  let validApiObject = await grabApiKey();
-  let parsedObject = JSON.parse(validApiObject as string);
-  let validApiKey = parsedObject.API;
+  let validApiKey = await grabApiKey();
   if (authValue !== validApiKey) {
     throw Error('Invalid API Key.');
   }

@@ -3,3 +3,5 @@
 .gitignore
 README.md
 node_modules
+src
+tsconfig.json
