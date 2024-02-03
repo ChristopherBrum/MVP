@@ -1,4 +1,3 @@
-// import { Socket } from "socket.io";
 import RedisHandler from '../db/redisService.js';
 import DynamoHandler from "../db/dynamoService.js";
 import { currentTimeStamp } from "../utils/helpers.js";
@@ -29,7 +28,7 @@ const parseRedisMessages = (messagesArr: string[]) => {
   });
 };
 
-// rooms is now { roomA: joinTime, roomB: joinTime, etc }
+// room structure: { roomA: joinTime, roomB: joinTime, etc. }
 const emitShortTermReconnectionStateRecovery = async (socket: CustomSocket, timestamp: number, rooms: SubscribedRooms) => {
   let messagesObj = await RedisHandler.redisMissedMessages(timestamp, rooms) as RedisMessage;
 
@@ -115,7 +114,7 @@ export const handleConnection = async (socket: CustomSocket) => {
     await RedisHandler.removeRoomFromSession(sessionId, roomName);
   });
 
-  socket.on('updateSessionTS', (newTime) => {
+  socket.on('updateSessionTS', () => {
     let session = socket.twineID || '';
     RedisHandler.setSessionTime(session);
   });
