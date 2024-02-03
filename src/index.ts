@@ -69,12 +69,11 @@ app.post('/api/twine', publish);
 // Frontend code now sends request to this route before establishing WebSocket connection
 app.get('/set-cookie', setCookie);
 
-
 // cron job redis
 const cronSchedule = "*/3 * * * *"; // runs every 3 minutes
 cron.schedule(cronSchedule, CronJobHandler.messageCronJob);
 
-// listening on port 3001
+// listening on port 3005
 httpServer.listen(PORT, () => {
   console.log('TwineServer listening on port', PORT);
 });
